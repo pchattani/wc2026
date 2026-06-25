@@ -324,6 +324,42 @@ a:hover { color: #79b8ff; }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: #484f58; }
 
+/* ── Methodology prose ───────────────────────────────────────────────────── */
+.prose-dark h3 {
+  font-size: 1.05rem; font-weight: 700; color: var(--text);
+  margin: 28px 0 10px; padding-bottom: 6px; border-bottom: 1px solid var(--border);
+}
+.prose-dark h4 {
+  font-size: 0.92rem; font-weight: 700; color: var(--text2); margin: 18px 0 8px;
+}
+.prose-dark p {
+  color: var(--text2); margin-bottom: 12px; max-width: 860px; line-height: 1.7;
+}
+.prose-dark ul, .prose-dark ol {
+  color: var(--text2); padding-left: 24px; margin-bottom: 12px; max-width: 820px;
+}
+.prose-dark li { margin-bottom: 5px; line-height: 1.6; }
+.prose-dark strong { color: var(--text); }
+.prose-dark a { color: var(--blue); }
+.prose-dark a:hover { color: #79b8ff; }
+.mt-4 { margin-top: 24px !important; }
+
+/* ── Methodology table ───────────────────────────────────────────────────── */
+.method-table {
+  width: 100%; max-width: 860px; border-collapse: collapse;
+  margin-bottom: 16px; font-size: 0.83rem;
+}
+.method-table th {
+  background: var(--bg3); color: var(--text3); font-weight: 600;
+  font-size: 0.75rem; letter-spacing: 0.04em; padding: 6px 12px;
+  border: 1px solid var(--border); text-align: left;
+}
+.method-table td {
+  background: var(--bg2); color: var(--text2); padding: 5px 12px;
+  border: 1px solid var(--border);
+}
+.method-table tr:nth-child(even) td { background: var(--bg3); }
+
 /* ── Sortable table headers ───────────────────────────────────────────────── */
 .sortable-th {
   cursor: pointer;

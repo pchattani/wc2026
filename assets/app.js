@@ -38,11 +38,11 @@ let renderedTabs = new Set();
 function renderTab(tabName) {
   if (renderedTabs.has(tabName)) return;
   renderedTabs.add(tabName);
-  if (tabName === 'probs')   renderProbs();
-  if (tabName === 'groups')  renderGroups();
-  if (tabName === 'bracket') renderBracket();
-  if (tabName === 'third')   renderScenarios();
-  if (tabName === 'team')    initTeamView();
+  if (tabName === 'probs')        renderProbs();
+  if (tabName === 'groups')       renderGroups();
+  if (tabName === 'third')        renderScenarios();
+  if (tabName === 'team')         initTeamView();
+  // methodology tab is static HTML — no render function needed
 }
 
 // ── Colours ───────────────────────────────────────────────────────────────────
@@ -576,7 +576,7 @@ function renderScenarios() {
 
 // ── TAB 5: TEAM VIEW ─────────────────────────────────────────────────────────
 function initTeamView() {
-  const { probs, bracket } = DATA;
+  const { probs } = DATA;
   const sel = document.getElementById('team-select');
   probs.teams.forEach(t => {
     const opt = document.createElement('option');
@@ -589,7 +589,7 @@ function initTeamView() {
 
 function renderTeamView(team) {
   if (!team) return;
-  const { probs, bracket } = DATA;
+  const { probs } = DATA;
   const teamData = probs.teams.find(t => t.team === team);
   if (!teamData) return;
 
@@ -626,30 +626,8 @@ function renderTeamView(team) {
 
   html += `</div></div></div>`;
 
-  const paths = (bracket.team_paths || {})[team] || {};
-  const stageNames = { r32: 'R32', r16: 'R16', qf: 'QF', sf: 'SF', final: 'Final' };
-  html += `<div class="col-md-7"><div class="card"><div class="card-header">Most Likely Opponents — ${team}</div>
-    <div class="card-body" style="padding:0">
-    <table class="wc-table" id="team-opps-table">
-    <thead><tr><th>Stage</th><th>Opponent</th><th class="td-num">P(face)</th></tr></thead><tbody>`;
-
-  ['r32', 'r16', 'qf', 'sf', 'final'].forEach(stage => {
-    const opps = Object.entries(paths[stage] || {}).sort((a, b) => b[1] - a[1]).slice(0, 3);
-    if (!opps.length) return;
-    opps.forEach(([opp, p], i) => {
-      html += `<tr>
-        <td>${i === 0 ? stageNames[stage] : ''}</td>
-        <td>${opp}</td>
-        <td class="td-num" style="color:var(--text2)">${(p * 100).toFixed(1)}%</td>
-      </tr>`;
-    });
-  });
-
-  html += `</tbody></table></div></div></div></div>`;
+  html += `</div>`;
   content.innerHTML = html;
-
-  const tbl = document.getElementById('team-opps-table');
-  if (tbl) makeSortable(tbl);
 }
 
 // ── Metadata ──────────────────────────────────────────────────────────────────
@@ -663,14 +641,13 @@ function updateMeta(meta) {
 // ── Bootstrap ─────────────────────────────────────────────────────────────────
 async function init() {
   try {
-    const [probs, groups, bracket, scenarios, meta] = await Promise.all([
+    const [probs, groups, scenarios, meta] = await Promise.all([
       fetchJSON('probs.json'),
       fetchJSON('groups.json'),
-      fetchJSON('bracket.json'),
       fetchJSON('scenarios.json'),
       fetchJSON('meta.json'),
     ]);
-    DATA = { probs, groups, bracket, scenarios, meta };
+    DATA = { probs, groups, scenarios, meta };
 
     updateMeta(meta);
     document.getElementById('loading-overlay').style.display = 'none';
@@ -682,7 +659,7 @@ async function init() {
       });
     });
 
-    renderTab('probs');
+    renderTab('groups');
   } catch (err) {
     console.error(err);
     document.getElementById('loading-overlay').innerHTML =
