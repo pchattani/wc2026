@@ -41,7 +41,6 @@
       <li class="nav-item"><a class="nav-link" href="#" data-tab="groups">Group Stage</a></li>
       <li class="nav-item"><a class="nav-link" href="#" data-tab="bracket">Bracket</a></li>
       <li class="nav-item"><a class="nav-link" href="#" data-tab="third">3rd-Place Guide</a></li>
-      <li class="nav-item"><a class="nav-link" href="#" data-tab="timeline">History</a></li>
       <li class="nav-item"><a class="nav-link" href="#" data-tab="team">Team View</a></li>
     </ul>
   </div>
@@ -112,12 +111,10 @@
 <div id="tab-bracket" class="tab-pane">
   <div class="container-xl">
     <p class="text-muted2 mb-3" style="font-size:0.82rem">
-      Simulated R32 matchups. Percentages show each team's probability of appearing in that match from 10,000 simulations.
-      Confirmed qualified teams shown in <span class="text-accent">blue</span>.
+      Official WC 2026 bracket. Team shown is the most likely occupant of each slot from 10,000 simulations.
+      Probability in parentheses. Teams in <span class="text-accent">blue</span> are confirmed for that slot.
     </p>
-    <div id="bracket-r32" class="bracket-grid mb-4"></div>
-    <div class="section-label mb-2">Round of 16 — most likely matchups</div>
-    <div id="bracket-r16" class="bracket-grid mb-4"></div>
+    <div id="bracket-tree" class="bracket-tree-wrap"></div>
   </div>
 </div>
 
@@ -161,27 +158,6 @@
   </div>
 </div>
 
-<!-- ══════════════════════════════════════════════════════════════════════════ -->
-<!-- TAB 5: HISTORY                                                             -->
-<!-- ══════════════════════════════════════════════════════════════════════════ -->
-<div id="tab-timeline" class="tab-pane">
-  <div class="container-xl">
-    <div class="row g-3">
-      <div class="col-12">
-        <div class="card">
-          <div class="card-header">Tournament Win Probability Over Time — Top 10 Teams</div>
-          <div class="card-body" style="padding:8px">
-            <div id="chart-timeline" style="height:480px"></div>
-          </div>
-        </div>
-      </div>
-      <div class="col-12" style="font-size:0.81rem; color:var(--text2); padding: 0 4px">
-        Each point represents a simulation run at that timestamp. Pre-tournament and post-matchday snapshots
-        were reconstructed using the actual results at each point in time.
-      </div>
-    </div>
-  </div>
-</div>
 
 <!-- ══════════════════════════════════════════════════════════════════════════ -->
 <!-- TAB 6: TEAM VIEW                                                           -->

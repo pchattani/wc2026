@@ -13,7 +13,6 @@ const DARK_LAYOUT = {
   legend: { bgcolor: 'rgba(0,0,0,0)', bordercolor: '#30363d', borderwidth: 1, font: { size: 11 } },
 };
 
-// ── Data store ────────────────────────────────────────────────────────────────
 let DATA = {};
 
 // ── Fetch helpers ────────────────────────────────────────────────────────────
@@ -39,12 +38,11 @@ let renderedTabs = new Set();
 function renderTab(tabName) {
   if (renderedTabs.has(tabName)) return;
   renderedTabs.add(tabName);
-  if (tabName === 'probs')    renderProbs();
-  if (tabName === 'groups')   renderGroups();
-  if (tabName === 'bracket')  renderBracket();
-  if (tabName === 'third')    renderScenarios();
-  if (tabName === 'timeline') renderTimeline();
-  if (tabName === 'team')     initTeamView();
+  if (tabName === 'probs')   renderProbs();
+  if (tabName === 'groups')  renderGroups();
+  if (tabName === 'bracket') renderBracket();
+  if (tabName === 'third')   renderScenarios();
+  if (tabName === 'team')    initTeamView();
 }
 
 // ── Colours ───────────────────────────────────────────────────────────────────
@@ -53,47 +51,87 @@ const CONF_COLORS = {
   CAF: '#d29922', AFC: '#bc8cff', OFC: '#8b949e', Other: '#6e7681',
 };
 
+// ── Sortable tables ───────────────────────────────────────────────────────────
+function makeSortable(table) {
+  const headers = table.querySelectorAll('thead th');
+  headers.forEach((th, colIdx) => {
+    if (th.dataset.nosort) return;
+    th.classList.add('sortable-th');
+    th.innerHTML += '<span class="sort-icon">⇅</span>';
+    let asc = null;
+    th.addEventListener('click', () => {
+      asc = asc === true ? false : true;
+      headers.forEach(h => h.querySelector('.sort-icon') && (h.querySelector('.sort-icon').textContent = '⇅'));
+      th.querySelector('.sort-icon').textContent = asc ? '↑' : '↓';
+      const tbody = table.querySelector('tbody');
+      const rows = Array.from(tbody.querySelectorAll('tr'));
+      rows.sort((a, b) => {
+        const aText = (a.cells[colIdx]?.textContent || '').trim();
+        const bText = (b.cells[colIdx]?.textContent || '').trim();
+        const aNum = parseFloat(aText.replace(/[%+]/g, ''));
+        const bNum = parseFloat(bText.replace(/[%+]/g, ''));
+        const numCmp = isNaN(aNum) || isNaN(bNum) ? 0 : (aNum - bNum);
+        const cmp = numCmp !== 0 ? numCmp : aText.localeCompare(bText);
+        return asc ? cmp : -cmp;
+      });
+      rows.forEach(r => tbody.appendChild(r));
+    });
+  });
+}
+
 // ── TAB 1: WIN PROBS ─────────────────────────────────────────────────────────
 function renderProbs() {
   const { probs } = DATA;
   const teams = probs.teams;
 
-  // Horizontal bar chart — all 48 teams
+  // Vertical bar chart — top 20 teams
+  const top20 = teams.slice(0, 20);
   const trace = {
-    type: 'bar', orientation: 'h',
-    y: teams.map(t => t.team),
-    x: teams.map(t => t.p_win * 100),
-    text: teams.map(t => (t.p_win * 100).toFixed(1) + '%'),
+    type: 'bar',
+    x: top20.map(t => t.team),
+    y: top20.map(t => +(t.p_win * 100).toFixed(2)),
+    text: top20.map(t => (t.p_win * 100).toFixed(1) + '%'),
     textposition: 'outside',
     cliponaxis: false,
-    marker: { color: teams.map(t => CONF_COLORS[t.confederation] || '#6e7681') },
-    hovertemplate: '<b>%{y}</b><br>Win: %{x:.1f}%<extra></extra>',
+    marker: {
+      color: top20.map(t => CONF_COLORS[t.confederation] || '#6e7681'),
+      line: { width: 0 },
+    },
+    hovertemplate: '<b>%{x}</b><br>Win: %{y:.1f}%<extra></extra>',
   };
 
   const layout = {
     ...DARK_LAYOUT,
-    margin: { t: 10, r: 60, b: 30, l: 130 },
-    xaxis: { ...DARK_LAYOUT.xaxis, ticksuffix: '%', title: '' },
-    yaxis: { ...DARK_LAYOUT.yaxis, automargin: true, tickfont: { size: 11 } },
-    height: 700,
-    shapes: [{ type: 'line', x0: 0, x1: 0, y0: -0.5, y1: 47.5, line: { color: '#30363d', width: 1 } }],
+    margin: { t: 30, r: 20, b: 90, l: 50 },
+    xaxis: {
+      ...DARK_LAYOUT.xaxis,
+      tickangle: -40,
+      tickfont: { size: 11 },
+      automargin: true,
+    },
+    yaxis: {
+      ...DARK_LAYOUT.yaxis,
+      ticksuffix: '%',
+      title: { text: 'Win Probability', font: { size: 11 } },
+    },
+    height: 380,
+    bargap: 0.3,
   };
 
-  // Legend via annotations
-  const confNames = [...new Set(teams.map(t => t.confederation))];
-  const legendAnnotations = confNames.map((c, i) => ({
-    x: 1.01, xref: 'paper', y: 1 - i * 0.05, yref: 'paper',
+  // Confederation legend as annotations
+  const confSeen = [...new Set(top20.map(t => t.confederation))];
+  layout.annotations = confSeen.map((c, i) => ({
+    x: 1, xref: 'paper', y: 1 - i * 0.07, yref: 'paper',
     text: `<span style="color:${CONF_COLORS[c]}">■</span> ${c}`,
     showarrow: false, font: { size: 10, color: '#8b949e' }, xanchor: 'left',
   }));
-  layout.annotations = legendAnnotations;
 
   Plotly.newPlot('chart-probs', [trace], layout, PLOTLY_CONF);
 
-  // Stage probability table — top 16
+  // Stage probability table — all 48 teams, sortable
   const tbody = document.getElementById('probs-table-body');
   tbody.innerHTML = '';
-  teams.slice(0, 16).forEach((t, idx) => {
+  teams.forEach((t, idx) => {
     const tr = document.createElement('tr');
     const pct = v => (v * 100).toFixed(1) + '%';
     tr.innerHTML = `
@@ -109,6 +147,9 @@ function renderProbs() {
     `;
     tbody.appendChild(tr);
   });
+
+  const tbl = document.getElementById('probs-table-body').closest('table');
+  if (tbl) makeSortable(tbl);
 }
 
 // ── TAB 2: GROUPS ────────────────────────────────────────────────────────────
@@ -131,10 +172,9 @@ function renderGroups() {
     const gamesText = gdata.is_complete ? 'Complete' : `${gdata.games_played}/6 played`;
     let html = `<div class="group-card-header">Group ${grp} &nbsp;<span style="font-weight:400;font-size:0.65rem;color:var(--text3)">${gamesText}</span></div>`;
 
-    // Standings table
     html += `<table class="wc-table">
       <thead><tr>
-        <th style="width:16px"></th><th></th>
+        <th style="width:16px" data-nosort></th><th></th>
         <th class="td-num">P</th><th class="td-num">W</th><th class="td-num">D</th><th class="td-num">L</th>
         <th class="td-num">GD</th><th class="td-num">Pts</th><th class="td-num">Q%</th>
       </tr></thead><tbody>`;
@@ -156,7 +196,6 @@ function renderGroups() {
 
     html += '</tbody></table>';
 
-    // Fixtures
     const done = gdata.fixtures.filter(f => f.done);
     const sched = gdata.fixtures.filter(f => !f.done);
     if (done.length) {
@@ -180,122 +219,276 @@ function renderGroups() {
 
     card.innerHTML = html;
     grid.appendChild(card);
+
+    // Make group table sortable (skip the dot column)
+    const tbl = card.querySelector('.wc-table');
+    if (tbl) makeSortable(tbl);
   });
 }
 
 // ── TAB 3: BRACKET ───────────────────────────────────────────────────────────
+// WC 2026 bracket tree structure:
+// Each entry: [r32_idx_a, r32_idx_b, r16_label]
+// R16 pairings (from WC2026_R16):
+const R16_PAIRS = [
+  [1, 4],   // M89
+  [0, 2],   // M90
+  [3, 5],   // M91
+  [6, 7],   // M92
+  [10, 11], // M93
+  [8, 9],   // M94
+  [13, 15], // M95
+  [12, 14], // M96
+];
+// QF pairings (indices into R16 winners): (0,1),(4,5),(2,3),(6,7)
+const QF_PAIRS = [[0, 1], [4, 5], [2, 3], [6, 7]];
+// SF pairings: (0,1),(2,3)
+const SF_PAIRS = [[0, 1], [2, 3]];
+
+// Left half feeds SF1: QF1(R16-0,R16-1) + QF2(R16-4,R16-5)
+// Right half feeds SF2: QF3(R16-2,R16-3) + QF4(R16-6,R16-7)
+// Bracket halves:
+// Left:  R32[1,4] → R16[0]; R32[0,2] → R16[1]; R16[0,1] → QF[0]
+//        R32[10,11] → R16[4]; R32[8,9] → R16[5]; R16[4,5] → QF[1]
+//        QF[0,1] → SF[0]
+// Right: R32[3,5] → R16[2]; R32[6,7] → R16[3]; R16[2,3] → QF[2]
+//        R32[13,15] → R16[6]; R32[12,14] → R16[7]; R16[6,7] → QF[3]
+//        QF[2,3] → SF[1]
+
+const BRACKET_HALVES = [
+  // Left half: top to bottom order
+  {
+    r32_order: [1, 4, 0, 2, 10, 11, 8, 9],   // R32 idx order within this half
+    r16_order: [0, 1, 4, 5],                   // R16 idx
+    qf_order:  [0, 1],                          // QF idx
+    sf_idx:    0,
+    label: 'Left',
+  },
+  // Right half
+  {
+    r32_order: [3, 5, 6, 7, 13, 15, 12, 14],
+    r16_order: [2, 3, 6, 7],
+    qf_order:  [2, 3],
+    sf_idx:    1,
+    label: 'Right',
+  },
+];
+
 function renderBracket() {
-  const { bracket, probs } = DATA;
+  const { bracket } = DATA;
+  const r32 = bracket.r32;  // array of 16 matches
 
-  // Build a lookup: team → p_r32
-  const teamR32 = {};
-  probs.teams.forEach(t => { teamR32[t.team] = t.p_r32; });
+  // Build R16/QF/SF winner slots (most likely team = top of slot_a_teams / slot_b_teams)
+  // We'll show "TBD" for knockout rounds since we'd need simulation of knockouts
+  // For now show the most likely R16/QF matchup teams from team_paths
 
-  // Build most-likely team for each slot from team paths
+  const container = document.getElementById('bracket-tree');
+  container.innerHTML = '';
+
+  // Build top-team lookup per R32 match for each side
+  function topTeam(teams, threshold = 0.0) {
+    if (!teams || !teams.length) return null;
+    const t = teams[0];
+    return t.p >= threshold ? t : null;
+  }
+
+  function teamLabel(t, isConfirmed) {
+    if (!t) return { name: 'TBD', pct: '', confirmed: false };
+    const pct = t.p >= 0.95 ? '' : ` (${(t.p * 100).toFixed(0)}%)`;
+    return { name: t.team, pct, confirmed: t.p >= 0.95 };
+  }
+
+  // R16 winners: approximate from team_paths — find most likely team to reach each R16 slot
+  // For each R16 match, the winner is the team with highest p_r16 who appears in that match
   const teamPaths = bracket.team_paths || {};
 
-  // R32 matches
-  const r32Container = document.getElementById('bracket-r32');
-  r32Container.innerHTML = '';
-
-  bracket.r32.forEach(m => {
-    const div = document.createElement('div');
-    div.className = 'bracket-match';
-
-    // Find top 2 teams for each slot
-    const topTeamsA = [];
-    const topTeamsB = [];
-
-    // Slot A teams and slot B teams from matchup probabilities
-    // We'll use team paths: for each team, check if they appear in R32 matchups
-    const slotTeams = {};
+  // Compute most likely R16/QF/SF/Final participants from team_paths
+  function topPathTeam(stage) {
+    const byP = {};
     Object.entries(teamPaths).forEach(([team, path]) => {
-      const r32opps = path.r32 || {};
-      Object.entries(r32opps).forEach(([opp, p]) => {
-        // This team plays this opponent in R32
-        const key = [team, opp].sort().join('|||');
-        if (!slotTeams[key]) slotTeams[key] = { team, opp, p };
+      const opps = path[stage] || {};
+      const totalP = Object.values(opps).reduce((s, p) => s + p, 0);
+      if (totalP > 0) byP[team] = totalP;
+    });
+    return byP;
+  }
+
+  // Render one bracket half
+  function renderHalf(halfDef, flipSide) {
+    const wrap = document.createElement('div');
+    wrap.className = 'bracket-half' + (flipSide ? ' bracket-half-right' : ' bracket-half-left');
+
+    // R32 games for this half
+    const r32Games = halfDef.r32_order.map(idx => r32[idx]);
+
+    // R16 games for this half (4 games)
+    // r16_order gives R16 indices; map to "which two R32 games feed each R16"
+    const r16WithFeeds = halfDef.r16_order.map(r16idx => {
+      const [feedA, feedB] = R16_PAIRS[r16idx];
+      return { r16idx, feedA, feedB };
+    });
+
+    // Render: 4 pairs of R32 games, each pair feeds a R16 game
+    // Then 2 pairs of R16 games feed each QF
+    // Then 2 QF games feed 1 SF
+
+    // Build the HTML as a flex row of columns
+    // Col order depends on flip
+    const cols = [];
+
+    // Column: R32 (8 games grouped in pairs feeding R16)
+    const r32Col = document.createElement('div');
+    r32Col.className = 'bc-col bc-col-r32';
+
+    for (let i = 0; i < 4; i++) {
+      const gameA = r32Games[i * 2];
+      const gameB = r32Games[i * 2 + 1];
+      const pair = document.createElement('div');
+      pair.className = 'bc-pair';
+
+      [gameA, gameB].forEach(gm => {
+        const box = document.createElement('div');
+        box.className = 'bc-game';
+        const tA = teamLabel(topTeam(gm.slot_a_teams));
+        const tB = teamLabel(topTeam(gm.slot_b_teams));
+        box.innerHTML = `
+          <div class="bc-label">${gm.match_id}</div>
+          <div class="bc-team ${tA.confirmed ? 'bc-confirmed' : ''}">${tA.name}<span class="bc-pct">${tA.pct}</span></div>
+          <div class="bc-team ${tB.confirmed ? 'bc-confirmed' : ''}">${tB.name}<span class="bc-pct">${tB.pct}</span></div>
+        `;
+        pair.appendChild(box);
       });
-    });
 
-    // For this match's slot, find the top probable teams
-    // Use the slot label as fallback
-    const slotA = m.slot_a;
-    const slotB = m.slot_b;
-
-    // Display top 3 likely teams from simulation for each side
-    // We approximate by looking at which teams have high R32 probability
-    // and match the slot description
-    const isSlot3rd = s => s.includes('3rd:');
-
-    div.innerHTML = `
-      <div class="bracket-match-id">${m.match_id} · R32</div>
-      <div class="bracket-team">
-        <span class="bracket-team-name ${slotA.length <= 3 ? 'bracket-confirmed' : ''}">${formatSlot(slotA)}</span>
-        <span class="bracket-team-pct" style="font-size:0.7rem;color:var(--text3)">${slotA}</span>
-      </div>
-      <div class="bracket-team">
-        <span class="bracket-team-name">${formatSlot(slotB)}</span>
-        <span class="bracket-team-pct" style="font-size:0.7rem;color:var(--text3)">${slotB}</span>
-      </div>
-    `;
-    r32Container.appendChild(div);
-  });
-
-  // R16 — show most likely matchups from team paths
-  const r16Container = document.getElementById('bracket-r16');
-  r16Container.innerHTML = '';
-
-  // Collect all R16 opponent probabilities
-  const r16pairs = {};
-  Object.entries(teamPaths).forEach(([team, path]) => {
-    const opps = path.r16 || {};
-    const topOpp = Object.entries(opps).sort((a, b) => b[1] - a[1])[0];
-    if (topOpp) {
-      const key = [team, topOpp[0]].sort().join('|||');
-      if (!r16pairs[key]) {
-        r16pairs[key] = { team, opp: topOpp[0], p: topOpp[1] };
-      }
+      r32Col.appendChild(pair);
     }
-  });
 
-  // Deduplicate and show top 8 matchups
-  const r16shown = new Set();
-  Object.values(r16pairs)
-    .sort((a, b) => b.p - a.p)
-    .slice(0, 16)
-    .forEach(({ team, opp, p }) => {
-      const key = [team, opp].sort().join('|||');
-      if (r16shown.has(key)) return;
-      r16shown.add(key);
-      const probA = teamPaths[team]?.r16?.[opp] || 0;
-      const probB = teamPaths[opp]?.r16?.[team] || 0;
-      const div = document.createElement('div');
-      div.className = 'bracket-match';
-      div.innerHTML = `
-        <div class="bracket-match-id">R16 matchup</div>
-        <div class="bracket-team">
-          <span class="bracket-team-name">${team}</span>
-          <span class="bracket-team-pct">${(probA * 100).toFixed(1)}%</span>
-        </div>
-        <div class="bracket-team">
-          <span class="bracket-team-name">${opp}</span>
-          <span class="bracket-team-pct">${(probB * 100).toFixed(1)}%</span>
-        </div>
+    // Connector column R32→R16
+    const conn1 = document.createElement('div');
+    conn1.className = 'bc-connectors';
+    for (let i = 0; i < 4; i++) {
+      const c = document.createElement('div');
+      c.className = 'bc-conn-pair';
+      c.innerHTML = '<div class="bc-conn-top"></div><div class="bc-conn-bot"></div>';
+      conn1.appendChild(c);
+    }
+
+    // R16 column (4 games, each pair feeds QF)
+    const r16Col = document.createElement('div');
+    r16Col.className = 'bc-col bc-col-r16';
+
+    for (let i = 0; i < 2; i++) {
+      const g1 = r16WithFeeds[i * 2];
+      const g2 = r16WithFeeds[i * 2 + 1];
+      const pair = document.createElement('div');
+      pair.className = 'bc-pair';
+
+      [g1, g2].forEach(gf => {
+        // Find most likely teams for this R16 matchup
+        const r32a = r32[gf.feedA];
+        const r32b = r32[gf.feedB];
+        const topA = topTeam(r32a.slot_a_teams) || topTeam(r32a.slot_b_teams);
+        const topB = topTeam(r32b.slot_a_teams) || topTeam(r32b.slot_b_teams);
+        const lA = teamLabel(topA);
+        const lB = teamLabel(topB);
+        const box = document.createElement('div');
+        box.className = 'bc-game';
+        box.innerHTML = `
+          <div class="bc-label">R16 · M${89 + gf.r16idx}</div>
+          <div class="bc-team ${lA.confirmed ? 'bc-confirmed' : ''}">${lA.name}<span class="bc-pct">${lA.pct}</span></div>
+          <div class="bc-team ${lB.confirmed ? 'bc-confirmed' : ''}">${lB.name}<span class="bc-pct">${lB.pct}</span></div>
+        `;
+        pair.appendChild(box);
+      });
+      r16Col.appendChild(pair);
+    }
+
+    // Connector R16→QF
+    const conn2 = document.createElement('div');
+    conn2.className = 'bc-connectors';
+    for (let i = 0; i < 2; i++) {
+      const c = document.createElement('div');
+      c.className = 'bc-conn-pair';
+      c.innerHTML = '<div class="bc-conn-top"></div><div class="bc-conn-bot"></div>';
+      conn2.appendChild(c);
+    }
+
+    // QF column (2 games)
+    const qfCol = document.createElement('div');
+    qfCol.className = 'bc-col bc-col-qf';
+
+    halfDef.qf_order.forEach(qfIdx => {
+      const [r16a, r16b] = QF_PAIRS[qfIdx];
+      // Find most likely teams for this QF (winners of R16 matches)
+      const r16aGame = r16WithFeeds.find(x => x.r16idx === r16a);
+      const r16bGame = r16WithFeeds.find(x => x.r16idx === r16b);
+
+      function r16TopTeam(r16game) {
+        if (!r16game) return null;
+        const ra = r32[r16game.feedA];
+        const rb = r32[r16game.feedB];
+        // Top of slot_a side of feedA (likely the stronger seed)
+        return topTeam(ra.slot_a_teams) || topTeam(ra.slot_b_teams);
+      }
+
+      const lA = teamLabel(r16TopTeam(r16aGame));
+      const lB = teamLabel(r16TopTeam(r16bGame));
+      const box = document.createElement('div');
+      box.className = 'bc-game bc-game-qf';
+      box.innerHTML = `
+        <div class="bc-label">QF · M${97 + qfIdx}</div>
+        <div class="bc-team ${lA.confirmed ? 'bc-confirmed' : ''}">${lA.name}<span class="bc-pct">${lA.pct}</span></div>
+        <div class="bc-team ${lB.confirmed ? 'bc-confirmed' : ''}">${lB.name}<span class="bc-pct">${lB.pct}</span></div>
       `;
-      r16Container.appendChild(div);
+      qfCol.appendChild(box);
     });
-}
 
-function formatSlot(slot) {
-  if (slot.startsWith('1') || slot.startsWith('2')) {
-    const pos = slot[0] === '1' ? '1st' : '2nd';
-    return `Group ${slot[1]} — ${pos}`;
+    // Connector QF→SF
+    const conn3 = document.createElement('div');
+    conn3.className = 'bc-connectors';
+    const c3 = document.createElement('div');
+    c3.className = 'bc-conn-pair';
+    c3.innerHTML = '<div class="bc-conn-top"></div><div class="bc-conn-bot"></div>';
+    conn3.appendChild(c3);
+
+    // SF column (1 game)
+    const sfCol = document.createElement('div');
+    sfCol.className = 'bc-col bc-col-sf';
+    const sfBox = document.createElement('div');
+    sfBox.className = 'bc-game bc-game-sf';
+    sfBox.innerHTML = `
+      <div class="bc-label">SF · M${101 + halfDef.sf_idx}</div>
+      <div class="bc-team">TBD</div>
+      <div class="bc-team">TBD</div>
+    `;
+    sfCol.appendChild(sfBox);
+
+    const colsArr = flipSide
+      ? [sfCol, conn3, qfCol, conn2, r16Col, conn1, r32Col]
+      : [r32Col, conn1, r16Col, conn2, qfCol, conn3, sfCol];
+
+    colsArr.forEach(c => wrap.appendChild(c));
+    return wrap;
   }
-  if (slot.startsWith('3rd:')) {
-    return '3rd-place from Grp ' + slot.slice(4);
-  }
-  return slot;
+
+  const leftHalf = renderHalf(BRACKET_HALVES[0], false);
+  const rightHalf = renderHalf(BRACKET_HALVES[1], true);
+
+  // Final box in center
+  const finalWrap = document.createElement('div');
+  finalWrap.className = 'bc-final-wrap';
+  finalWrap.innerHTML = `
+    <div class="bc-final-label">FINAL</div>
+    <div class="bc-game bc-game-final">
+      <div class="bc-label">M103</div>
+      <div class="bc-team">TBD</div>
+      <div class="bc-team">TBD</div>
+    </div>
+    <div class="bc-final-label" style="margin-top:8px">Jul 19 · MetLife</div>
+  `;
+
+  container.appendChild(leftHalf);
+  container.appendChild(finalWrap);
+  container.appendChild(rightHalf);
 }
 
 // ── TAB 4: 3RD PLACE SCENARIOS ───────────────────────────────────────────────
@@ -303,10 +496,7 @@ function renderScenarios() {
   const { scenarios } = DATA;
   const rows = scenarios.scenarios;
 
-  // Update note
   const note = document.getElementById('scenario-note');
-  const high = rows.find(r => r.pts === 3 && r.p_qualify < 0.999 && r.p_qualify >= 0.90);
-  const mid  = rows.find(r => r.pts === 3 && r.p_qualify >= 0.50 && r.p_qualify < 0.80);
   note.innerHTML = `
     <strong style="color:var(--blue)">How to read this:</strong>
     Each cell shows the probability that a 3rd-place team with that
@@ -318,7 +508,6 @@ function renderScenarios() {
     <strong style="color:var(--red)">2 or fewer points → very unlikely.</strong>
   `;
 
-  // Heatmap: rows = pts (high to low), cols = GD values
   const allPts = [...new Set(rows.map(r => r.pts))].sort((a, b) => b - a);
   const allGd  = [...new Set(rows.map(r => r.gd))].sort((a, b) => a - b);
 
@@ -341,7 +530,7 @@ function renderScenarios() {
       [1.0, '#58a6ff'],
     ],
     zmin: 0, zmax: 1,
-    text: z.map(row => row.map(v => v !== null ? (v * 100).toFixed(0) + '%' : 'n/a')),
+    text: z.map(row => row.map(v => v !== null ? (v * 100).toFixed(0) + '%' : '')),
     texttemplate: '%{text}',
     textfont: { size: 11, color: '#0d1117' },
     hovertemplate: '%{y}, GD %{x}<br>P(qualify): %{text}<extra></extra>',
@@ -363,7 +552,6 @@ function renderScenarios() {
 
   Plotly.newPlot('chart-scenarios', [trace], layout, PLOTLY_CONF);
 
-  // Table
   const tbody = document.getElementById('scenario-table-body');
   tbody.innerHTML = '';
   [...rows].sort((a, b) => b.pts - a.pts || b.gd - a.gd).forEach(row => {
@@ -381,50 +569,12 @@ function renderScenarios() {
     `;
     tbody.appendChild(tr);
   });
+
+  const tbl = document.getElementById('scenario-table-body').closest('table');
+  if (tbl) makeSortable(tbl);
 }
 
-// ── TAB 5: TIMELINE ──────────────────────────────────────────────────────────
-function renderTimeline() {
-  const { history, probs } = DATA;
-  const snapshots = history.snapshots;
-  if (!snapshots || snapshots.length < 2) {
-    document.getElementById('chart-timeline').innerHTML =
-      '<div style="color:var(--text2);padding:40px;text-align:center">Timeline will appear after multiple simulation runs.</div>';
-    return;
-  }
-
-  // Top 10 teams by current win probability
-  const top10 = probs.teams.slice(0, 10).map(t => t.team);
-
-  const traces = top10.map(team => {
-    const x = [], y = [];
-    snapshots.forEach(snap => {
-      if (snap.probs[team] !== undefined) {
-        x.push(snap.label || snap.ts);
-        y.push(snap.probs[team] * 100);
-      }
-    });
-    return {
-      type: 'scatter', mode: 'lines+markers',
-      name: team, x, y,
-      line: { width: 2 },
-      marker: { size: 5 },
-      hovertemplate: `<b>${team}</b><br>%{y:.1f}%<extra></extra>`,
-    };
-  });
-
-  const layout = {
-    ...DARK_LAYOUT,
-    margin: { t: 10, r: 20, b: 60, l: 50 },
-    yaxis: { ...DARK_LAYOUT.yaxis, title: 'Win Probability (%)', ticksuffix: '%' },
-    xaxis: { ...DARK_LAYOUT.xaxis, title: '' },
-    legend: { ...DARK_LAYOUT.legend, orientation: 'h', y: -0.2, x: 0 },
-  };
-
-  Plotly.newPlot('chart-timeline', traces, layout, PLOTLY_CONF);
-}
-
-// ── TAB 6: TEAM VIEW ─────────────────────────────────────────────────────────
+// ── TAB 5: TEAM VIEW ─────────────────────────────────────────────────────────
 function initTeamView() {
   const { probs, bracket } = DATA;
   const sel = document.getElementById('team-select');
@@ -476,12 +626,12 @@ function renderTeamView(team) {
 
   html += `</div></div></div>`;
 
-  // Most likely opponents
   const paths = (bracket.team_paths || {})[team] || {};
   const stageNames = { r32: 'R32', r16: 'R16', qf: 'QF', sf: 'SF', final: 'Final' };
   html += `<div class="col-md-7"><div class="card"><div class="card-header">Most Likely Opponents — ${team}</div>
     <div class="card-body" style="padding:0">
-    <table class="wc-table"><thead><tr><th>Stage</th><th>Most Likely Opponent</th><th class="td-num">P(face)</th></tr></thead><tbody>`;
+    <table class="wc-table" id="team-opps-table">
+    <thead><tr><th>Stage</th><th>Opponent</th><th class="td-num">P(face)</th></tr></thead><tbody>`;
 
   ['r32', 'r16', 'qf', 'sf', 'final'].forEach(stage => {
     const opps = Object.entries(paths[stage] || {}).sort((a, b) => b[1] - a[1]).slice(0, 3);
@@ -497,6 +647,9 @@ function renderTeamView(team) {
 
   html += `</tbody></table></div></div></div></div>`;
   content.innerHTML = html;
+
+  const tbl = document.getElementById('team-opps-table');
+  if (tbl) makeSortable(tbl);
 }
 
 // ── Metadata ──────────────────────────────────────────────────────────────────
@@ -510,20 +663,18 @@ function updateMeta(meta) {
 // ── Bootstrap ─────────────────────────────────────────────────────────────────
 async function init() {
   try {
-    const [probs, groups, bracket, scenarios, history, meta] = await Promise.all([
+    const [probs, groups, bracket, scenarios, meta] = await Promise.all([
       fetchJSON('probs.json'),
       fetchJSON('groups.json'),
       fetchJSON('bracket.json'),
       fetchJSON('scenarios.json'),
-      fetchJSON('history.json'),
       fetchJSON('meta.json'),
     ]);
-    DATA = { probs, groups, bracket, scenarios, history, meta };
+    DATA = { probs, groups, bracket, scenarios, meta };
 
     updateMeta(meta);
     document.getElementById('loading-overlay').style.display = 'none';
 
-    // Tab click listeners
     document.querySelectorAll('#mainTabs .nav-link').forEach(link => {
       link.addEventListener('click', e => {
         e.preventDefault();
@@ -531,7 +682,6 @@ async function init() {
       });
     });
 
-    // Render first tab
     renderTab('probs');
   } catch (err) {
     console.error(err);

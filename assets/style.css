@@ -122,28 +122,164 @@ body {
 .q-eliminated { background: var(--red); }
 .q-unknown    { background: var(--text3); }
 
-/* ── Bracket ─────────────────────────────────────────────────────────────── */
-.bracket-grid {
-  display: grid; gap: 8px;
-  grid-template-columns: repeat(4, 1fr);
+/* ── Bracket tree ─────────────────────────────────────────────────────────── */
+.bracket-tree-wrap {
+  display: flex;
+  align-items: center;
+  overflow-x: auto;
+  padding: 12px 0 20px;
+  gap: 0;
+  min-height: 700px;
 }
-@media (max-width: 900px) { .bracket-grid { grid-template-columns: repeat(2, 1fr); } }
 
-.bracket-match {
-  background: var(--bg2); border: 1px solid var(--border); border-radius: 6px;
-  padding: 8px 10px; font-size: 0.82rem;
+.bracket-half-left,
+.bracket-half-right {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
 }
-.bracket-match-id {
-  font-size: 0.65rem; color: var(--text3); letter-spacing: 0.05em; margin-bottom: 4px;
+
+/* R32 reads left→right on left half, right→left on right half */
+.bracket-half-right {
+  flex-direction: row-reverse;
 }
-.bracket-team {
-  display: flex; justify-content: space-between; align-items: center;
-  padding: 3px 0; border-bottom: 1px solid #21262d;
+
+.bc-col {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
 }
-.bracket-team:last-child { border-bottom: none; }
-.bracket-team-name { font-weight: 500; color: var(--text); }
-.bracket-team-pct  { font-size: 0.75rem; color: var(--text2); }
-.bracket-confirmed { color: var(--blue); font-weight: 700; }
+
+/* Each pair of R32 games that feed one R16 match */
+.bc-pair {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+/* Game box */
+.bc-game {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  margin: 3px 0;
+  min-width: 140px;
+  max-width: 160px;
+  font-size: 0.78rem;
+  overflow: hidden;
+}
+
+.bc-label {
+  font-size: 0.60rem;
+  color: var(--text3);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 3px 7px 2px;
+  border-bottom: 1px solid var(--bg3);
+  background: var(--bg3);
+}
+
+.bc-team {
+  padding: 4px 7px;
+  border-bottom: 1px solid #21262d;
+  color: var(--text);
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.bc-team:last-child { border-bottom: none; }
+.bc-confirmed { color: var(--blue); font-weight: 700; }
+.bc-pct { font-size: 0.70rem; color: var(--text3); margin-left: 4px; flex-shrink: 0; }
+
+/* R16/QF/SF — slightly taller appearance via padding */
+.bc-game-qf .bc-team  { padding: 5px 7px; }
+.bc-game-sf .bc-team  { padding: 6px 7px; }
+
+/* Connector columns between rounds */
+.bc-connectors {
+  display: flex;
+  flex-direction: column;
+  width: 18px;
+  align-self: stretch;
+}
+
+.bc-conn-pair {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.bc-conn-top {
+  flex: 1;
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.bc-conn-bot {
+  flex: 1;
+  border-right: 1px solid var(--border);
+  border-top: 1px solid var(--border);
+}
+
+/* For the right half, connectors mirror */
+.bracket-half-right .bc-conn-top {
+  border-right: none;
+  border-left: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+.bracket-half-right .bc-conn-bot {
+  border-right: none;
+  border-left: 1px solid var(--border);
+  border-top: 1px solid var(--border);
+}
+
+/* Column widths per round */
+.bc-col-r32  { min-width: 148px; }
+.bc-col-r16  { min-width: 148px; }
+.bc-col-qf   { min-width: 148px; flex-direction: column; justify-content: space-around; gap: 0; }
+.bc-col-sf   { min-width: 148px; flex-direction: column; justify-content: center; }
+
+/* QF + SF pairs should space out like pairs */
+.bc-col-qf,
+.bc-col-sf {
+  display: flex;
+}
+
+/* Final center column */
+.bc-final-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0 6px;
+  flex-shrink: 0;
+}
+
+.bc-final-label {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--blue);
+  text-align: center;
+  margin-bottom: 4px;
+}
+
+.bc-game-final {
+  border-color: var(--blue);
+  min-width: 150px;
+}
+
+.bc-game-final .bc-label {
+  color: var(--blue);
+  background: rgba(88,166,255,0.08);
+  border-bottom-color: rgba(88,166,255,0.3);
+}
 
 /* ── Scenario heatmap note ───────────────────────────────────────────────── */
 .scenario-note {
@@ -187,3 +323,11 @@ a:hover { color: #79b8ff; }
 ::-webkit-scrollbar-track { background: var(--bg); }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: #484f58; }
+
+/* ── Sortable table headers ───────────────────────────────────────────────── */
+.sortable-th {
+  cursor: pointer;
+  user-select: none;
+}
+.sortable-th:hover { color: var(--text); }
+.sort-icon { margin-left: 4px; opacity: 0.5; font-size: 0.75em; }
