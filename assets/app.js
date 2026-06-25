@@ -493,91 +493,115 @@ function renderBracket() {
 
 // ── 3RD PLACE LIVE TRACKER ───────────────────────────────────────────────────
 function renderThirdPlaceTracker() {
-  const { groups } = DATA;
+  const { groups, probs } = DATA;
   const groupData = groups.groups;
-
-  // Collect 3rd-place teams from all groups, marking completed vs TBD
-  const thirds = [];
+  // Build lookup: team → p_r32 (probability of reaching R32 via any path)
+  const pQualLookup = {};
+  (probs.teams || []).forEach(t => { pQualLookup[t.team] = t.p_r32; });
   const allGroups = ['A','B','C','D','E','F','G','H','I','J','K','L'];
-  allGroups.forEach(grp => {
+
+  // Take the current 3rd-place team from every group (complete or in-progress)
+  // pos values in standings are 1-indexed
+  const thirds = allGroups.map(grp => {
     const g = groupData[grp];
-    if (!g) { thirds.push({ group: grp, done: false }); return; }
-    if (g.is_complete) {
-      const row = g.standings.find(s => s.pos === 3);
-      if (row) thirds.push({ group: grp, done: true, team: row.team, pts: row.pts, gd: row.gd, gf: row.gf, ga: row.ga });
-      else thirds.push({ group: grp, done: false });
-    } else {
-      thirds.push({ group: grp, done: false });
-    }
+    if (!g || !g.standings || g.standings.length < 3) return { group: grp, hasData: false };
+    // standings are sorted by current position; 3rd is index 2
+    const row = g.standings[2];
+    return {
+      group: grp,
+      hasData: true,
+      done: g.is_complete,
+      team: row.team,
+      played: row.played,
+      pts: row.pts,
+      gd: row.gd,
+      gf: row.gf,
+      ga: row.ga,
+    };
   });
 
-  const doneThirds = thirds.filter(t => t.done);
-  const doneCount = doneThirds.length;
-
-  // Rank completed groups' 3rd-place teams
-  const ranked = [...doneThirds].sort((a, b) =>
-    b.pts - a.pts || b.gd - a.gd || b.gf - a.gf
-  );
-  const cutIdx = 7; // 8th best = index 7
+  // Rank all 12 by 3rd-place tiebreaker: pts → GD → GF
+  const ranked = [...thirds].sort((a, b) => {
+    if (!a.hasData && !b.hasData) return 0;
+    if (!a.hasData) return 1;
+    if (!b.hasData) return -1;
+    return (b.pts - a.pts) || (b.gd - a.gd) || (b.gf - a.gf);
+  });
 
   const wrap = document.getElementById('third-tracker-wrap');
   if (!wrap) return;
 
   let html = `<div class="card mb-3">
-    <div class="card-header">Live 3rd-Place Standings &nbsp;<span style="font-weight:400;color:var(--text3)">${doneCount} of 12 groups complete</span></div>
+    <div class="card-header">Current 3rd-Place Race — Best 8 Advance</div>
     <div class="card-body" style="padding:0">
       <table class="wc-table">
         <thead><tr>
           <th data-nosort style="width:36px">#</th>
-          <th data-nosort>Group</th>
+          <th data-nosort>Grp</th>
           <th>Team</th>
+          <th class="td-num">P</th>
           <th class="td-num">Pts</th>
           <th class="td-num">GD</th>
           <th class="td-num">GF</th>
           <th class="td-num">GA</th>
+          <th class="td-num">P(Q)</th>
           <th data-nosort style="text-align:center">Status</th>
         </tr></thead>
         <tbody>`;
 
-  // First: ranked completed groups
   ranked.forEach((r, i) => {
     const rank = i + 1;
     const isIn = rank <= 8;
-    const isBubble = rank === 8; // last qualifying spot
+    const isCutline = rank === 9; // first team OUT
+
+    // Draw the cutline separator before position 9
+    if (isCutline) {
+      html += `<tr>
+        <td colspan="9" style="padding:0;border-bottom:2px dashed var(--red);position:relative">
+          <span style="position:absolute;right:10px;top:-9px;font-size:0.65rem;color:var(--red);background:var(--bg2);padding:0 4px;font-weight:700">CUTLINE</span>
+        </td>
+      </tr>`;
+    }
+
+    if (!r.hasData) {
+      html += `<tr style="opacity:0.35">
+        <td style="color:var(--text3)">—</td>
+        <td style="color:var(--text3);font-size:0.75rem">${r.group}</td>
+        <td colspan="6" style="color:var(--text3)">No data yet</td>
+        <td></td><td></td>
+      </tr>`;
+      return;
+    }
+
     let badge, badgeStyle;
-    if (doneCount < 8) {
-      // Fewer than 8 complete — everyone in so far is tentatively "IN"
-      badge = 'IN';
-      badgeStyle = 'background:rgba(63,185,80,0.15);color:var(--green);border:1px solid rgba(63,185,80,0.3)';
-    } else if (isIn) {
-      badge = isBubble ? 'IN (bubble)' : 'IN';
-      badgeStyle = isBubble
-        ? 'background:rgba(210,153,34,0.15);color:var(--yellow);border:1px solid rgba(210,153,34,0.3)'
+    if (isIn) {
+      badge = rank === 8 ? 'IN ●' : 'IN';
+      badgeStyle = rank === 8
+        ? 'background:rgba(210,153,34,0.18);color:var(--yellow);border:1px solid rgba(210,153,34,0.4)'
         : 'background:rgba(63,185,80,0.15);color:var(--green);border:1px solid rgba(63,185,80,0.3)';
     } else {
       badge = 'OUT';
       badgeStyle = 'background:rgba(248,81,73,0.15);color:var(--red);border:1px solid rgba(248,81,73,0.3)';
     }
+
     const gdStr = r.gd >= 0 ? '+' + r.gd : '' + r.gd;
-    html += `<tr>
-      <td style="color:var(--text3)">${rank}</td>
-      <td style="color:var(--text3);font-size:0.78rem">GRP ${r.group}</td>
-      <td style="font-weight:500">${r.team}</td>
-      <td class="td-num" style="font-weight:700;color:var(--text)">${r.pts}</td>
+    const doneTag = r.done ? '' : `<span style="font-size:0.65rem;color:var(--text3);margin-left:5px">(${r.played}gp)</span>`;
+    const rowStyle = isIn ? '' : 'opacity:0.7';
+    const pq = pQualLookup[r.team];
+    const pqStr = pq !== undefined ? (pq * 100).toFixed(0) + '%' : '—';
+    const pqColor = pq >= 0.85 ? 'var(--green)' : pq >= 0.50 ? 'var(--yellow)' : pq >= 0.20 ? 'var(--orange)' : 'var(--red)';
+
+    html += `<tr style="${rowStyle}">
+      <td style="color:var(--text3);font-weight:600">${rank}</td>
+      <td style="color:var(--text3);font-size:0.75rem">${r.group}</td>
+      <td style="font-weight:${isIn ? '600' : '400'}">${r.team}${doneTag}</td>
+      <td class="td-num" style="color:var(--text3)">${r.played}</td>
+      <td class="td-num" style="font-weight:700;color:${isIn ? 'var(--text)' : 'var(--text2)'}">${r.pts}</td>
       <td class="td-num">${gdStr}</td>
       <td class="td-num">${r.gf}</td>
       <td class="td-num">${r.ga}</td>
+      <td class="td-num" style="font-weight:600;color:${pqColor}">${pqStr}</td>
       <td style="text-align:center"><span style="font-size:0.70rem;font-weight:700;padding:2px 8px;border-radius:10px;${badgeStyle}">${badge}</span></td>
-    </tr>`;
-  });
-
-  // Then: TBD groups
-  thirds.filter(t => !t.done).forEach(r => {
-    html += `<tr style="opacity:0.45">
-      <td style="color:var(--text3)">—</td>
-      <td style="color:var(--text3);font-size:0.78rem">GRP ${r.group}</td>
-      <td colspan="5" style="color:var(--text3)">TBD</td>
-      <td style="text-align:center"><span style="font-size:0.70rem;padding:2px 8px;border-radius:10px;background:var(--bg3);color:var(--text3)">TBD</span></td>
     </tr>`;
   });
 
