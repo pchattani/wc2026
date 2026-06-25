@@ -618,13 +618,10 @@ function renderScenarios() {
   const note = document.getElementById('scenario-note');
   note.innerHTML = `
     <strong style="color:var(--blue)">How to read this:</strong>
-    Each cell shows the probability that a 3rd-place team with that
-    <em>points total</em> and <em>goal difference</em> would qualify as one of the best 8 of 12 third-place teams.
-    <br>
-    <strong style="color:var(--green)">4 points → guaranteed qualification</strong> in nearly all scenarios.
-    <strong style="color:var(--yellow)">3 points → depends heavily on goal difference</strong>
-    (3 pts, GD ≥ 0 is ~99%; at GD −4 drops to ~84%).
-    <strong style="color:var(--red)">2 or fewer points → very unlikely.</strong>
+    Each cell shows the simulation's estimated probability that a 3rd-place team finishing with that
+    <em>points total</em> and <em>goal difference</em> would rank among the best 8 of 12 third-place
+    finishers and advance to the Round of 32. Higher points and better goal difference improve the
+    chances. The heatmap updates after each round as more group results come in.
   `;
 
   const allPts = [...new Set(rows.map(r => r.pts))].sort((a, b) => b - a);
