@@ -1,0 +1,189 @@
+/* WC 2026 Dashboard — Dark GitHub theme */
+:root {
+  --bg:     #0d1117;
+  --bg2:    #161b22;
+  --bg3:    #21262d;
+  --border: #30363d;
+  --text:   #e6edf3;
+  --text2:  #8b949e;
+  --text3:  #6e7681;
+  --blue:   #58a6ff;
+  --green:  #3fb950;
+  --red:    #f85149;
+  --orange: #f97316;
+  --purple: #bc8cff;
+  --yellow: #d29922;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 14px;
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+/* ── Header ──────────────────────────────────────────────────────────────── */
+#site-header {
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+}
+.site-title {
+  font-size: 1.35rem; font-weight: 700; color: var(--text); margin: 0 0 3px;
+}
+.site-sub {
+  font-size: 0.81rem; color: var(--text2); margin: 0 0 2px;
+}
+.badge-updated {
+  font-size: 0.70rem; color: var(--text3); background: var(--bg3);
+  border: 1px solid var(--border); padding: 3px 8px; border-radius: 4px;
+}
+
+/* ── Tab bar ─────────────────────────────────────────────────────────────── */
+#tab-bar {
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  position: sticky; top: 0; z-index: 100;
+}
+#tab-bar .nav-tabs { border-bottom: none; padding-top: 4px; gap: 2px; }
+#tab-bar .nav-link {
+  color: var(--text2); background: transparent; border: none;
+  border-bottom: 3px solid transparent;
+  padding: 8px 16px; font-size: 0.86rem; font-weight: 500;
+  transition: color 0.15s, border-color 0.15s; text-decoration: none;
+}
+#tab-bar .nav-link:hover { color: var(--text); border-bottom-color: var(--text3); }
+#tab-bar .nav-link.active { color: var(--blue); border-bottom-color: var(--blue); font-weight: 600; }
+
+/* ── Tab panes ───────────────────────────────────────────────────────────── */
+.tab-pane { display: none; padding: 20px 0; }
+.tab-pane.active { display: block; }
+
+/* ── Loading overlay ─────────────────────────────────────────────────────── */
+#loading-overlay {
+  position: fixed; inset: 0; background: rgba(13,17,23,0.85);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  z-index: 9999;
+}
+#loading-overlay .spinner-border { color: var(--blue) !important; width: 2.5rem; height: 2.5rem; }
+#loading-overlay .mt-2 { color: var(--text2); font-size: 0.85rem; }
+
+/* ── Cards ───────────────────────────────────────────────────────────────── */
+.card {
+  background: var(--bg2); border: 1px solid var(--border); border-radius: 6px;
+}
+.card-header {
+  background: var(--bg3); border-bottom: 1px solid var(--border);
+  color: var(--text2); font-size: 0.72rem; font-weight: 700;
+  letter-spacing: 0.09em; text-transform: uppercase; padding: 8px 12px;
+}
+.card-body { padding: 12px; }
+
+/* ── Tables ──────────────────────────────────────────────────────────────── */
+.wc-table { width: 100%; border-collapse: collapse; font-size: 0.83rem; }
+.wc-table thead th {
+  background: var(--bg3); color: var(--text2); padding: 6px 10px;
+  font-size: 0.71rem; font-weight: 700; letter-spacing: 0.07em;
+  text-transform: uppercase; border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+.wc-table tbody tr td {
+  padding: 5px 10px; border-bottom: 1px solid #21262d;
+  color: var(--text); font-size: 0.83rem; vertical-align: middle;
+}
+.wc-table tbody tr:hover td { background: #1c2128; }
+.wc-table tbody tr:last-child td { border-bottom: none; }
+.td-num { text-align: right; font-variant-numeric: tabular-nums; }
+
+/* ── Group cards ─────────────────────────────────────────────────────────── */
+.group-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 6px; }
+.group-card-header {
+  background: var(--bg3); padding: 6px 10px; font-weight: 700;
+  font-size: 0.75rem; letter-spacing: 0.07em; text-transform: uppercase;
+  color: var(--text2); border-bottom: 1px solid var(--border);
+  border-radius: 6px 6px 0 0;
+}
+.group-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+@media (max-width: 1100px) { .group-grid { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 800px)  { .group-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 500px)  { .group-grid { grid-template-columns: 1fr; } }
+
+/* ── Q badges ────────────────────────────────────────────────────────────── */
+.q-badge {
+  display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px;
+}
+.q-confirmed  { background: var(--green); }
+.q-likely     { background: var(--yellow); }
+.q-borderline { background: var(--orange); }
+.q-eliminated { background: var(--red); }
+.q-unknown    { background: var(--text3); }
+
+/* ── Bracket ─────────────────────────────────────────────────────────────── */
+.bracket-grid {
+  display: grid; gap: 8px;
+  grid-template-columns: repeat(4, 1fr);
+}
+@media (max-width: 900px) { .bracket-grid { grid-template-columns: repeat(2, 1fr); } }
+
+.bracket-match {
+  background: var(--bg2); border: 1px solid var(--border); border-radius: 6px;
+  padding: 8px 10px; font-size: 0.82rem;
+}
+.bracket-match-id {
+  font-size: 0.65rem; color: var(--text3); letter-spacing: 0.05em; margin-bottom: 4px;
+}
+.bracket-team {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 3px 0; border-bottom: 1px solid #21262d;
+}
+.bracket-team:last-child { border-bottom: none; }
+.bracket-team-name { font-weight: 500; color: var(--text); }
+.bracket-team-pct  { font-size: 0.75rem; color: var(--text2); }
+.bracket-confirmed { color: var(--blue); font-weight: 700; }
+
+/* ── Scenario heatmap note ───────────────────────────────────────────────── */
+.scenario-note {
+  background: #1a2332; border: 1px solid var(--border); border-left: 3px solid var(--blue);
+  border-radius: 4px; padding: 10px 14px; font-size: 0.82rem; color: var(--text2);
+}
+
+/* ── Team deep-dive ──────────────────────────────────────────────────────── */
+.team-select-wrap { max-width: 320px; margin-bottom: 16px; }
+.team-select {
+  width: 100%; background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 6px; color: var(--text); padding: 7px 10px;
+  font-size: 0.85rem; outline: none; appearance: none;
+}
+.team-select:focus { border-color: var(--blue); box-shadow: 0 0 0 2px rgba(88,166,255,0.15); }
+option { background: var(--bg2); }
+
+.prob-bar-wrap { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.prob-bar-label { font-size: 0.78rem; color: var(--text2); width: 70px; flex-shrink: 0; }
+.prob-bar-track {
+  flex: 1; height: 8px; background: var(--bg3); border-radius: 4px; overflow: hidden;
+}
+.prob-bar-fill { height: 100%; border-radius: 4px; background: var(--blue); }
+.prob-bar-pct  { font-size: 0.78rem; color: var(--text); width: 45px; text-align: right; font-variant-numeric: tabular-nums; }
+
+/* ── Misc ────────────────────────────────────────────────────────────────── */
+.section-label {
+  font-size: 0.70rem; font-weight: 700; letter-spacing: 0.09em;
+  text-transform: uppercase; color: var(--text2); margin-bottom: 8px;
+}
+.text-accent  { color: var(--blue); }
+.text-muted2  { color: var(--text2); }
+.text-muted3  { color: var(--text3); }
+.stat-hero { font-size: 1.6rem; font-weight: 700; color: var(--text); }
+.stat-label { font-size: 0.72rem; color: var(--text2); text-transform: uppercase; letter-spacing: 0.06em; }
+
+a { color: var(--blue); text-decoration: none; }
+a:hover { color: #79b8ff; }
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #484f58; }

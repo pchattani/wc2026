@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WC 2026 Probability Dashboard</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+
+<!-- ── Loading overlay ────────────────────────────────────────────────────── -->
+<div id="loading-overlay">
+  <div class="spinner-border" role="status"></div>
+  <div class="mt-2">Loading simulation data…</div>
+</div>
+
+<!-- ── Header ──────────────────────────────────────────────────────────────── -->
+<div id="site-header">
+  <div class="container-xl">
+    <div class="d-flex justify-content-between align-items-center py-3">
+      <div>
+        <h1 class="site-title">⚽ WC 2026 Probability Dashboard</h1>
+        <p class="site-sub">Monte Carlo simulation · 10,000 runs · Dixon-Coles + Elo ensemble · Updates hourly</p>
+        <p class="site-sub" style="margin-top:2px;font-size:0.75rem;color:var(--text3)">
+          48 teams · 12 groups · Top 2 + best 8 third-place → Round of 32
+        </p>
+      </div>
+      <div class="text-end">
+        <span id="last-updated" class="badge-updated">Loading…</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Tab navigation ──────────────────────────────────────────────────────── -->
+<div id="tab-bar">
+  <div class="container-xl">
+    <ul class="nav nav-tabs" id="mainTabs">
+      <li class="nav-item"><a class="nav-link active" href="#" data-tab="probs">Win Odds</a></li>
+      <li class="nav-item"><a class="nav-link" href="#" data-tab="groups">Group Stage</a></li>
+      <li class="nav-item"><a class="nav-link" href="#" data-tab="bracket">Bracket</a></li>
+      <li class="nav-item"><a class="nav-link" href="#" data-tab="third">3rd-Place Guide</a></li>
+      <li class="nav-item"><a class="nav-link" href="#" data-tab="timeline">History</a></li>
+      <li class="nav-item"><a class="nav-link" href="#" data-tab="team">Team View</a></li>
+    </ul>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<!-- TAB 1: WIN ODDS                                                            -->
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<div id="tab-probs" class="tab-pane active">
+  <div class="container-xl">
+    <div class="row g-3">
+
+      <!-- Chart -->
+      <div class="col-12">
+        <div class="card">
+          <div class="card-header">Tournament Win Probability — All 48 Teams</div>
+          <div class="card-body" style="padding:8px">
+            <div id="chart-probs" style="height:700px"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stage-by-stage table (top 16) -->
+      <div class="col-12">
+        <div class="card">
+          <div class="card-header">Stage-by-Stage Probabilities — Top 16 Teams</div>
+          <div class="card-body" style="padding:0">
+            <table class="wc-table">
+              <thead>
+                <tr>
+                  <th>Team</th>
+                  <th class="td-num">R32</th>
+                  <th class="td-num">R16</th>
+                  <th class="td-num">QF</th>
+                  <th class="td-num">SF</th>
+                  <th class="td-num">Final</th>
+                  <th class="td-num">Win</th>
+                </tr>
+              </thead>
+              <tbody id="probs-table-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- row -->
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<!-- TAB 2: GROUP STAGE                                                         -->
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<div id="tab-groups" class="tab-pane">
+  <div class="container-xl">
+    <p class="text-muted2 mb-3" style="font-size:0.82rem">
+      <span class="q-badge q-confirmed"></span>Confirmed &nbsp;
+      <span class="q-badge q-likely"></span>≥70% to qualify &nbsp;
+      <span class="q-badge q-borderline"></span>30–70% &nbsp;
+      <span class="q-badge q-eliminated"></span>Eliminated or &lt;10%
+    </p>
+    <div id="groups-grid" class="group-grid"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<!-- TAB 3: BRACKET                                                             -->
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<div id="tab-bracket" class="tab-pane">
+  <div class="container-xl">
+    <p class="text-muted2 mb-3" style="font-size:0.82rem">
+      Simulated R32 matchups. Percentages show each team's probability of appearing in that match from 10,000 simulations.
+      Confirmed qualified teams shown in <span class="text-accent">blue</span>.
+    </p>
+    <div id="bracket-r32" class="bracket-grid mb-4"></div>
+    <div class="section-label mb-2">Round of 16 — most likely matchups</div>
+    <div id="bracket-r16" class="bracket-grid mb-4"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<!-- TAB 4: THIRD-PLACE GUIDE                                                   -->
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<div id="tab-third" class="tab-pane">
+  <div class="container-xl">
+    <div class="row g-3">
+      <div class="col-12">
+        <div class="scenario-note mb-3" id="scenario-note">
+          Loading threshold data…
+        </div>
+      </div>
+      <div class="col-12">
+        <div class="card">
+          <div class="card-header">P(qualify as best 8 of 12 third-place teams) by Points and Goal Difference</div>
+          <div class="card-body" style="padding:8px">
+            <div id="chart-scenarios" style="height:420px"></div>
+          </div>
+        </div>
+      </div>
+      <div class="col-12">
+        <div class="card">
+          <div class="card-header">Full Scenario Table</div>
+          <div class="card-body" style="padding:0; max-height:350px; overflow-y:auto">
+            <table class="wc-table">
+              <thead>
+                <tr>
+                  <th>Points</th>
+                  <th>Goal Diff</th>
+                  <th class="td-num">P(Qualify)</th>
+                </tr>
+              </thead>
+              <tbody id="scenario-table-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<!-- TAB 5: HISTORY                                                             -->
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<div id="tab-timeline" class="tab-pane">
+  <div class="container-xl">
+    <div class="row g-3">
+      <div class="col-12">
+        <div class="card">
+          <div class="card-header">Tournament Win Probability Over Time — Top 10 Teams</div>
+          <div class="card-body" style="padding:8px">
+            <div id="chart-timeline" style="height:480px"></div>
+          </div>
+        </div>
+      </div>
+      <div class="col-12" style="font-size:0.81rem; color:var(--text2); padding: 0 4px">
+        Each point represents a simulation run at that timestamp. Pre-tournament and post-matchday snapshots
+        were reconstructed using the actual results at each point in time.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<!-- TAB 6: TEAM VIEW                                                           -->
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<div id="tab-team" class="tab-pane">
+  <div class="container-xl">
+    <div class="team-select-wrap">
+      <select id="team-select" class="team-select">
+        <option value="">Select a team…</option>
+      </select>
+    </div>
+    <div id="team-view-content"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<!-- Footer -->
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<div style="border-top:1px solid var(--border);padding:20px 0;margin-top:30px">
+  <div class="container-xl" style="font-size:0.72rem;color:var(--text3);line-height:1.6">
+    <strong style="color:var(--text2)">Methodology:</strong>
+    Tournament probabilities computed via 10,000 Monte Carlo simulations using a
+    Dixon-Coles score model (trained on WC 2026 group stage results) blended with a
+    FIFA-ranking Elo prior. Group tiebreakers follow the official WC 2026 rules
+    (overall pts → H2H pts → H2H GD → H2H GF → overall GD → overall GF).
+    The best-8 third-place qualification uses overall record (no H2H).
+    Bracket is the official FIFA WC 2026 draw. Live results from football-data.org.
+    <br><br>
+    For questions or feedback: <a href="https://github.com/pchattani">@pchattani</a>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>
