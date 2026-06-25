@@ -491,8 +491,103 @@ function renderBracket() {
   container.appendChild(rightHalf);
 }
 
+// ── 3RD PLACE LIVE TRACKER ───────────────────────────────────────────────────
+function renderThirdPlaceTracker() {
+  const { groups } = DATA;
+  const groupData = groups.groups;
+
+  // Collect 3rd-place teams from all groups, marking completed vs TBD
+  const thirds = [];
+  const allGroups = ['A','B','C','D','E','F','G','H','I','J','K','L'];
+  allGroups.forEach(grp => {
+    const g = groupData[grp];
+    if (!g) { thirds.push({ group: grp, done: false }); return; }
+    if (g.is_complete) {
+      const row = g.standings.find(s => s.pos === 3);
+      if (row) thirds.push({ group: grp, done: true, team: row.team, pts: row.pts, gd: row.gd, gf: row.gf, ga: row.ga });
+      else thirds.push({ group: grp, done: false });
+    } else {
+      thirds.push({ group: grp, done: false });
+    }
+  });
+
+  const doneThirds = thirds.filter(t => t.done);
+  const doneCount = doneThirds.length;
+
+  // Rank completed groups' 3rd-place teams
+  const ranked = [...doneThirds].sort((a, b) =>
+    b.pts - a.pts || b.gd - a.gd || b.gf - a.gf
+  );
+  const cutIdx = 7; // 8th best = index 7
+
+  const wrap = document.getElementById('third-tracker-wrap');
+  if (!wrap) return;
+
+  let html = `<div class="card mb-3">
+    <div class="card-header">Live 3rd-Place Standings &nbsp;<span style="font-weight:400;color:var(--text3)">${doneCount} of 12 groups complete</span></div>
+    <div class="card-body" style="padding:0">
+      <table class="wc-table">
+        <thead><tr>
+          <th data-nosort style="width:36px">#</th>
+          <th data-nosort>Group</th>
+          <th>Team</th>
+          <th class="td-num">Pts</th>
+          <th class="td-num">GD</th>
+          <th class="td-num">GF</th>
+          <th class="td-num">GA</th>
+          <th data-nosort style="text-align:center">Status</th>
+        </tr></thead>
+        <tbody>`;
+
+  // First: ranked completed groups
+  ranked.forEach((r, i) => {
+    const rank = i + 1;
+    const isIn = rank <= 8;
+    const isBubble = rank === 8; // last qualifying spot
+    let badge, badgeStyle;
+    if (doneCount < 8) {
+      // Fewer than 8 complete — everyone in so far is tentatively "IN"
+      badge = 'IN';
+      badgeStyle = 'background:rgba(63,185,80,0.15);color:var(--green);border:1px solid rgba(63,185,80,0.3)';
+    } else if (isIn) {
+      badge = isBubble ? 'IN (bubble)' : 'IN';
+      badgeStyle = isBubble
+        ? 'background:rgba(210,153,34,0.15);color:var(--yellow);border:1px solid rgba(210,153,34,0.3)'
+        : 'background:rgba(63,185,80,0.15);color:var(--green);border:1px solid rgba(63,185,80,0.3)';
+    } else {
+      badge = 'OUT';
+      badgeStyle = 'background:rgba(248,81,73,0.15);color:var(--red);border:1px solid rgba(248,81,73,0.3)';
+    }
+    const gdStr = r.gd >= 0 ? '+' + r.gd : '' + r.gd;
+    html += `<tr>
+      <td style="color:var(--text3)">${rank}</td>
+      <td style="color:var(--text3);font-size:0.78rem">GRP ${r.group}</td>
+      <td style="font-weight:500">${r.team}</td>
+      <td class="td-num" style="font-weight:700;color:var(--text)">${r.pts}</td>
+      <td class="td-num">${gdStr}</td>
+      <td class="td-num">${r.gf}</td>
+      <td class="td-num">${r.ga}</td>
+      <td style="text-align:center"><span style="font-size:0.70rem;font-weight:700;padding:2px 8px;border-radius:10px;${badgeStyle}">${badge}</span></td>
+    </tr>`;
+  });
+
+  // Then: TBD groups
+  thirds.filter(t => !t.done).forEach(r => {
+    html += `<tr style="opacity:0.45">
+      <td style="color:var(--text3)">—</td>
+      <td style="color:var(--text3);font-size:0.78rem">GRP ${r.group}</td>
+      <td colspan="5" style="color:var(--text3)">TBD</td>
+      <td style="text-align:center"><span style="font-size:0.70rem;padding:2px 8px;border-radius:10px;background:var(--bg3);color:var(--text3)">TBD</span></td>
+    </tr>`;
+  });
+
+  html += `</tbody></table></div></div>`;
+  wrap.innerHTML = html;
+}
+
 // ── TAB 4: 3RD PLACE SCENARIOS ───────────────────────────────────────────────
 function renderScenarios() {
+  renderThirdPlaceTracker();
   const { scenarios } = DATA;
   const rows = scenarios.scenarios;
 
@@ -589,7 +684,7 @@ function initTeamView() {
 
 function renderTeamView(team) {
   if (!team) return;
-  const { probs } = DATA;
+  const { probs, bracket } = DATA;
   const teamData = probs.teams.find(t => t.team === team);
   if (!teamData) return;
 
@@ -603,13 +698,10 @@ function renderTeamView(team) {
     { key: 'p_win',   label: 'Win' },
   ];
 
-  let html = `
-    <div class="row g-3">
-      <div class="col-md-5">
-        <div class="card">
-          <div class="card-header">Stage Probabilities — ${team}</div>
-          <div class="card-body">
-  `;
+  let html = `<div class="row g-3"><div class="col-md-5">
+    <div class="card">
+      <div class="card-header">Stage Probabilities — ${team}</div>
+      <div class="card-body">`;
 
   stages.forEach(s => {
     const pct = teamData[s.key] * 100;
@@ -620,14 +712,58 @@ function renderTeamView(team) {
           <div class="prob-bar-fill" style="width:${Math.min(pct, 100)}%"></div>
         </div>
         <div class="prob-bar-pct">${pct.toFixed(1)}%</div>
-      </div>
-    `;
+      </div>`;
   });
 
   html += `</div></div></div>`;
 
+  // Most likely opponents table from bracket.team_paths
+  const teamPaths = bracket && bracket.team_paths && bracket.team_paths[team];
+  if (teamPaths) {
+    const stageOrder = [
+      { key: 'r32',   label: 'R32' },
+      { key: 'r16',   label: 'R16' },
+      { key: 'qf',    label: 'QF' },
+      { key: 'sf',    label: 'SF' },
+      { key: 'final', label: 'Final' },
+    ];
+
+    let rows = '';
+    stageOrder.forEach(s => {
+      const opps = teamPaths[s.key] || {};
+      const sorted = Object.entries(opps).sort((a, b) => b[1] - a[1]).slice(0, 3);
+      if (sorted.length === 0) return;
+      sorted.forEach(([opp, p], i) => {
+        rows += `<tr>
+          <td style="${i === 0 ? '' : 'border-top:none;color:transparent;font-size:0;padding-top:0'}">${i === 0 ? s.label : ''}</td>
+          <td>${opp}</td>
+          <td class="td-num">${(p * 100).toFixed(1)}%</td>
+        </tr>`;
+      });
+    });
+
+    html += `<div class="col-md-7">
+      <div class="card">
+        <div class="card-header">Most Likely Opponents — ${team}</div>
+        <div class="card-body" style="padding:0">
+          <table class="wc-table" id="team-opponents-table">
+            <thead><tr>
+              <th data-nosort>Stage</th>
+              <th>Opponent</th>
+              <th class="td-num">P(Face)</th>
+            </tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>
+      </div>
+    </div>`;
+  }
+
   html += `</div>`;
   content.innerHTML = html;
+
+  const oppTable = document.getElementById('team-opponents-table');
+  if (oppTable) makeSortable(oppTable);
 }
 
 // ── Metadata ──────────────────────────────────────────────────────────────────
@@ -641,13 +777,14 @@ function updateMeta(meta) {
 // ── Bootstrap ─────────────────────────────────────────────────────────────────
 async function init() {
   try {
-    const [probs, groups, scenarios, meta] = await Promise.all([
+    const [probs, groups, scenarios, meta, bracket] = await Promise.all([
       fetchJSON('probs.json'),
       fetchJSON('groups.json'),
       fetchJSON('scenarios.json'),
       fetchJSON('meta.json'),
+      fetchJSON('bracket.json'),
     ]);
-    DATA = { probs, groups, scenarios, meta };
+    DATA = { probs, groups, scenarios, meta, bracket };
 
     updateMeta(meta);
     document.getElementById('loading-overlay').style.display = 'none';
