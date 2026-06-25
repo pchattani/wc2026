@@ -109,6 +109,94 @@
         "Mexico": 0.0067,
         "Croatia": 0.0064
       }
+    },
+    {
+      "ts": "2026-06-25T00:14:11Z",
+      "label": "Live",
+      "probs": {
+        "Argentina": 0.2002,
+        "France": 0.1528,
+        "Spain": 0.1331,
+        "England": 0.1183,
+        "Brazil": 0.0838,
+        "Portugal": 0.0722,
+        "Germany": 0.0574,
+        "Netherlands": 0.0404,
+        "Colombia": 0.0398,
+        "Belgium": 0.0232,
+        "USA": 0.0202,
+        "Uruguay": 0.0167,
+        "Japan": 0.0131,
+        "Morocco": 0.0076,
+        "Croatia": 0.0055,
+        "Mexico": 0.0053
+      }
+    },
+    {
+      "ts": "2026-06-25T00:18:53Z",
+      "label": "Live",
+      "probs": {
+        "Argentina": 0.2002,
+        "France": 0.1528,
+        "Spain": 0.1331,
+        "England": 0.1183,
+        "Brazil": 0.0838,
+        "Portugal": 0.0722,
+        "Germany": 0.0574,
+        "Netherlands": 0.0404,
+        "Colombia": 0.0398,
+        "Belgium": 0.0232,
+        "USA": 0.0202,
+        "Uruguay": 0.0167,
+        "Japan": 0.0131,
+        "Morocco": 0.0076,
+        "Croatia": 0.0055,
+        "Mexico": 0.0053
+      }
+    },
+    {
+      "ts": "2026-06-25T00:22:56Z",
+      "label": "Live",
+      "probs": {
+        "Argentina": 0.2002,
+        "France": 0.1528,
+        "Spain": 0.1331,
+        "England": 0.1183,
+        "Brazil": 0.0838,
+        "Portugal": 0.0722,
+        "Germany": 0.0574,
+        "Netherlands": 0.0404,
+        "Colombia": 0.0398,
+        "Belgium": 0.0232,
+        "USA": 0.0202,
+        "Uruguay": 0.0167,
+        "Japan": 0.0131,
+        "Morocco": 0.0076,
+        "Croatia": 0.0055,
+        "Mexico": 0.0053
+      }
+    },
+    {
+      "ts": "2026-06-25T00:26:16Z",
+      "label": "Live",
+      "probs": {
+        "Argentina": 0.2002,
+        "France": 0.1528,
+        "Spain": 0.1331,
+        "England": 0.1183,
+        "Brazil": 0.0838,
+        "Portugal": 0.0722,
+        "Germany": 0.0574,
+        "Netherlands": 0.0404,
+        "Colombia": 0.0398,
+        "Belgium": 0.0232,
+        "USA": 0.0202,
+        "Uruguay": 0.0167,
+        "Japan": 0.0131,
+        "Morocco": 0.0076,
+        "Croatia": 0.0055,
+        "Mexico": 0.0053
+      }
     }
   ]
 }
