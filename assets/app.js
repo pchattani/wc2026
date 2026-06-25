@@ -722,7 +722,67 @@ function renderTeamView(team) {
     { key: 'p_win',   label: 'Win' },
   ];
 
-  let html = `<div class="row g-3"><div class="col-md-5">
+  // ── Path-by-position section ─────────────────────────────────────────────
+  const teamPaths = bracket && bracket.team_paths && bracket.team_paths[team];
+  let html = '';
+  if (teamPaths && teamPaths.p_finish_pos) {
+    const pfp = teamPaths.p_finish_pos;        // {1:p, 2:p, 3:p, 4:p}
+    const byPos = teamPaths.r32_by_pos || {};   // {1:[{team,p},...], 2:[...], 3:[...]}
+
+    const p1 = pfp['1'] || 0;
+    const p2 = pfp['2'] || 0;
+    const p3qualify = Math.max(0, teamData.p_r32 - p1 - p2);
+    const pElim = Math.max(0, 1 - teamData.p_r32);
+
+    function oppChips(posOpps) {
+      if (!posOpps || posOpps.length === 0) return '<span style="color:var(--text3)">—</span>';
+      return posOpps.slice(0, 4).map(o =>
+        `<span class="pos-opp-chip">${o.team} <span class="pos-opp-p">${(o.p * 100).toFixed(0)}%</span></span>`
+      ).join('');
+    }
+
+    const scenarios = [
+      { label: '1st in Group',        pct: p1,        opps: byPos['1'], color: 'var(--green)', qual: true },
+      { label: '2nd in Group',        pct: p2,        opps: byPos['2'], color: 'var(--blue)',  qual: true },
+      { label: '3rd (qualifies)',      pct: p3qualify, opps: byPos['3'], color: 'var(--yellow)',qual: true },
+      { label: 'Eliminated',          pct: pElim,     opps: null,       color: 'var(--red)',   qual: false },
+    ];
+
+    html += `<div class="row g-3"><div class="col-12"><div class="card">
+      <div class="card-header">Scenario-Based R32 Path — ${team}</div>
+      <div class="card-body" style="padding:0">
+        <table class="wc-table pos-path-table">
+          <thead><tr>
+            <th style="width:180px">Finish Position</th>
+            <th style="width:90px" class="td-num">P</th>
+            <th style="width:240px">Probability</th>
+            <th>Most Likely R32 Opponents</th>
+          </tr></thead>
+          <tbody>`;
+
+    // Only render scenarios with non-trivial probability (>= 0.5%)
+    // so guaranteed qualifiers (e.g. Colombia at 6pts) never show "Eliminated: 0.0%"
+    const visibleScenarios = scenarios.filter(s => s.pct >= 0.005);
+    visibleScenarios.forEach(s => {
+      const barPct = (s.pct * 100).toFixed(1);
+      const barW = Math.min(s.pct * 100, 100);
+      html += `<tr>
+        <td style="font-weight:600;color:${s.color}">${s.label}</td>
+        <td class="td-num" style="font-weight:700;color:${s.color}">${barPct}%</td>
+        <td>
+          <div style="background:var(--bg3);border-radius:3px;height:6px;overflow:hidden">
+            <div style="width:${barW}%;height:100%;background:${s.color};border-radius:3px"></div>
+          </div>
+        </td>
+        <td>${s.qual ? oppChips(s.opps) : '<span style="color:var(--text3)">—</span>'}</td>
+      </tr>`;
+    });
+
+    html += `</tbody></table></div></div></div></div>`;
+  }
+
+  // ── Stage probs + opponents row ───────────────────────────────────────────
+  html += `<div class="row g-3"><div class="col-md-5">
     <div class="card">
       <div class="card-header">Stage Probabilities — ${team}</div>
       <div class="card-body">`;
@@ -742,7 +802,6 @@ function renderTeamView(team) {
   html += `</div></div></div>`;
 
   // Most likely opponents table from bracket.team_paths
-  const teamPaths = bracket && bracket.team_paths && bracket.team_paths[team];
   if (teamPaths) {
     const stageOrder = [
       { key: 'r32',   label: 'R32' },

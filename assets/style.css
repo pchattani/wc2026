@@ -360,6 +360,14 @@ a:hover { color: #79b8ff; }
 }
 .method-table tr:nth-child(even) td { background: var(--bg3); }
 
+/* ── Position-path table ─────────────────────────────────────────────────── */
+.pos-path-table td { vertical-align: middle; }
+.pos-opp-chip {
+  display: inline-block; margin: 1px 4px 1px 0;
+  font-size: 0.78rem; color: var(--text2); white-space: nowrap;
+}
+.pos-opp-p { color: var(--text3); margin-left: 2px; }
+
 /* ── Sortable table headers ───────────────────────────────────────────────── */
 .sortable-th {
   cursor: pointer;
