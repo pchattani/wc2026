@@ -393,7 +393,6 @@ function renderKnockout() {
     mkCol('bc-col-final', 'Final',         finHtml),
   ].forEach(el => container.appendChild(el));
 }
-}
 // ── 3RD PLACE LIVE TRACKER ───────────────────────────────────────────────────
 function renderThirdPlaceTracker() {
   const { groups, probs } = DATA;
