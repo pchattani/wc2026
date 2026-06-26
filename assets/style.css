@@ -125,24 +125,20 @@ body {
 /* ── Bracket tree ─────────────────────────────────────────────────────────── */
 .bracket-tree-wrap {
   display: flex;
-  align-items: center;
+  align-items: stretch;
   overflow-x: auto;
   padding: 12px 0 20px;
   gap: 0;
   min-height: 900px;
 }
 
+/* bracket-half classes kept for compatibility but no longer used in main bracket */
 .bracket-half-left,
 .bracket-half-right {
   display: flex;
-  align-items: center;
+  align-items: stretch;
   flex: 1;
   min-width: 0;
-}
-
-/* R32 reads left→right on left half, right→left on right half */
-.bracket-half-right {
-  flex-direction: row-reverse;
 }
 
 .bc-col {
@@ -227,52 +223,18 @@ body {
   border-top: 1px solid var(--border);
 }
 
-/* For the right half, connectors mirror */
-.bracket-half-right .bc-conn-top {
-  border-right: none;
-  border-left: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
-}
-.bracket-half-right .bc-conn-bot {
-  border-right: none;
-  border-left: 1px solid var(--border);
-  border-top: 1px solid var(--border);
-}
+/* right-half mirror styles removed — single left-to-right bracket used instead */
 
-/* Column widths per round */
-.bc-col-r32  { min-width: 190px; }
-.bc-col-r16  { min-width: 180px; }
-.bc-col-qf   { min-width: 175px; flex-direction: column; justify-content: space-around; gap: 0; }
-.bc-col-sf   { min-width: 170px; flex-direction: column; justify-content: center; }
+/* Column widths per round (single left-to-right bracket) */
+.bc-col-r32   { min-width: 195px; }
+.bc-col-r16   { min-width: 185px; }
+.bc-col-qf    { min-width: 178px; }
+.bc-col-sf    { min-width: 172px; }
+.bc-col-final { min-width: 180px; }
 
-/* QF + SF pairs should space out like pairs */
-.bc-col-qf,
-.bc-col-sf {
-  display: flex;
-}
-
-/* Final center column */
-.bc-final-wrap {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 0 6px;
-  flex-shrink: 0;
-}
-
-.bc-final-label {
-  font-size: 0.62rem;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--blue);
-  text-align: center;
-  margin-bottom: 4px;
-}
-
+/* Final column — the rightmost column in the single bracket */
 .bc-game-final {
   border-color: var(--blue);
-  min-width: 150px;
 }
 
 .bc-game-final .bc-label {
@@ -280,6 +242,10 @@ body {
   background: rgba(88,166,255,0.08);
   border-bottom-color: rgba(88,166,255,0.3);
 }
+
+/* bc-col-sf single pair should fill the column body evenly */
+.bc-col-sf .bc-pair,
+.bc-col-qf .bc-pair { flex: 1; }
 
 /* ── Scenario heatmap note ───────────────────────────────────────────────── */
 .scenario-note {

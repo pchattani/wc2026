@@ -273,179 +273,126 @@ const BRACKET_HALVES = [
 ];
 
 function renderKnockout() {
-  const { bracket } = DATA;
-  const r32 = bracket.r32;
+  const r32 = DATA.bracket.r32;
   const container = document.getElementById('bracket-tree');
   container.innerHTML = '';
 
+  // Single left-to-right bracket: R32 -> R16 -> QF -> SF -> Final
+  // Each group of 2 R32 indices feeds one R16 match.
+  const R32_GROUPS = [[1,4],[0,2],[10,11],[8,9],[3,5],[6,7],[13,15],[12,14]];
+  const R16_IDS    = [89, 90, 93, 94, 91, 92, 95, 96];   // parallel to R32_GROUPS
+  const R16_GROUPS = [[89,90],[93,94],[91,92],[95,96]];   // each pair feeds one QF
+  const QF_IDS     = [97, 98, 99, 100];
+  const QF_GROUPS  = [[97,98],[99,100]];                  // each pair feeds one SF
+
   // ── helpers ────────────────────────────────────────────────────────────────
-
-  function flagImg(teamName) {
-    const code = TEAM_FLAG[teamName];
-    if (!code) return '<span style="width:20px;height:15px;display:inline-block;flex-shrink:0"></span>';
-    return `<img class="bc-flag" src="https://flagcdn.com/20x15/${code}.png" alt="" loading="lazy" onerror="this.style.display='none'">`;
+  function flagImg(name) {
+    const code = TEAM_FLAG[name];
+    return code
+      ? `<img class="bc-flag" src="https://flagcdn.com/20x15/${code}.png" alt="" loading="lazy" onerror="this.style.display='none'">`
+      : '<span style="width:20px;height:15px;display:inline-block;flex-shrink:0"></span>';
   }
 
-  // A team row: flag + name + probability chip
-  // winProb: h2h conditional win probability (undefined = not available)
-  // slotP: probability of occupying this slot (undefined if confirmed)
-  function teamRow(teamName, isConfirmed, winProb, slotP) {
-    let probHtml = '';
-    if (winProb !== undefined) {
-      const cls = winProb >= 0.5 ? 'bc-pct-fav' : 'bc-pct-dog';
-      probHtml = `<span class="bc-win-pct ${cls}">${(winProb * 100).toFixed(0)}%</span>`;
-    } else if (slotP !== undefined && slotP < 0.96) {
-      probHtml = `<span class="bc-win-pct bc-pct-slot">${(slotP * 100).toFixed(0)}%</span>`;
-    }
-    const confirmedCls = isConfirmed ? ' bc-confirmed' : '';
-    return `<div class="bc-team-row${confirmedCls}">
-      ${flagImg(teamName)}
-      <span class="bc-name">${teamName}</span>
-      ${probHtml}
-    </div>`;
+  // Slot row: confirmed slot shows win %, undetermined slot shows slot-occupancy % per team.
+  function slotRow(teams) {
+    const visible = teams.filter(t => t.p >= 0.03);
+    if (!visible.length) return '<div class="bc-slot-row"><span class="bc-tbd-inline">TBD</span></div>';
+    const confirmed = visible.length === 1 && visible[0].p >= 0.85;
+    const parts = visible.map(t => {
+      let pct = '';
+      if (confirmed) {
+        if (t.p_win != null) {
+          const fav = t.p_win >= 0.5;
+          pct = `<span class="bc-inline-pct ${fav ? 'bc-ipct-fav' : 'bc-ipct-dog'}">(${(t.p_win * 100).toFixed(0)}%)</span>`;
+        }
+      } else {
+        pct = `<span class="bc-inline-pct bc-ipct-slot">(${(t.p * 100).toFixed(0)}%)</span>`;
+      }
+      const nc = confirmed ? 'bc-name bc-conf-name' : 'bc-name';
+      return `<span class="bc-inline-team">${flagImg(t.team)}<span class="${nc}">${t.team}</span>${pct}</span>`;
+    });
+    return `<div class="bc-slot-row">${parts.join('<span class="bc-sep">/</span>')}</div>`;
   }
 
-  // R32 match card — all potential teams for each slot shown inline as
-  // "Team A (win%) / Team B (win%)" where win% = P(advance from this match | in slot).
   function r32Card(gm) {
-    const slotA = gm.slot_a_teams || [];
-    const slotB = gm.slot_b_teams || [];
-
-    // Render one slot as an inline row: Flag Name (win%) / Flag Name (win%) / ...
-    function slotRow(teams, isSlotA) {
-      const visible = teams.filter(t => t.p >= 0.03);
-      if (!visible.length) return '<div class="bc-slot-row"><span class="bc-tbd-inline">TBD</span></div>';
-
-      const confirmed = visible.length === 1 && visible[0].p >= 0.90;
-      const parts = visible.map((t, idx) => {
-        // p_win = conditional P(team wins this match | team is in slot)
-        const pWin = t.p_win != null ? t.p_win : null;
-        const pct  = pWin != null
-          ? `<span class="bc-inline-pct ${pWin >= 0.5 ? 'bc-ipct-fav' : 'bc-ipct-dog'}">(${(pWin * 100).toFixed(0)}%)</span>`
-          : (t.p < 0.96 ? `<span class="bc-inline-pct bc-ipct-slot">(${(t.p * 100).toFixed(0)}%)</span>` : '');
-        const nameCls = (confirmed && idx === 0) ? ' class="bc-name bc-conf-name"' : ' class="bc-name"';
-        return `<span class="bc-inline-team">${flagImg(t.team)}<span${nameCls}>${t.team}</span>${pct}</span>`;
-      });
-
-      const sep = '<span class="bc-sep">/</span>';
-      return `<div class="bc-slot-row">${parts.join(sep)}</div>`;
-    }
-
     return `<div class="bc-game">
       <div class="bc-label">${gm.match_id} &middot; <span class="bc-slot-lbl">${gm.slot_a} vs ${gm.slot_b}</span></div>
-      ${slotRow(slotA, true)}
+      ${slotRow(gm.slot_a_teams || [])}
       <div class="bc-slot-div"></div>
-      ${slotRow(slotB, false)}
+      ${slotRow(gm.slot_b_teams || [])}
     </div>`;
   }
 
-  // TBD card for R16/QF/SF -- no teams yet, just show which R32 winners feed in
-  function tbdCard(matchId, labelA, labelB, extraCls) {
-    extraCls = extraCls || '';
-    return `<div class="bc-game ${extraCls}">
-      <div class="bc-label">${matchId}</div>
-      <div class="bc-tbd-row">${labelA}</div>
-      <div class="bc-tbd-row">${labelB}</div>
+  function tbdCard(mid, a, b, cls) {
+    return `<div class="bc-game${cls ? ' '+cls : ''}">
+      <div class="bc-label">${mid}</div>
+      <div class="bc-tbd-row">${a}</div>
+      <div class="bc-tbd-row">${b}</div>
     </div>`;
   }
 
-  // n connector pairs; spacer at top matches bc-round-label height so lines align with match cards
   function connectors(n) {
     const el = document.createElement('div');
     el.className = 'bc-connectors';
-    let html = '<div class="bc-conn-spacer"></div>';
-    for (let i = 0; i < n; i++) {
-      html += '<div class="bc-conn-pair"><div class="bc-conn-top"></div><div class="bc-conn-bot"></div></div>';
-    }
-    el.innerHTML = html;
+    let h = '<div class="bc-conn-spacer"></div>';
+    for (let i = 0; i < n; i++) h += '<div class="bc-conn-pair"><div class="bc-conn-top"></div><div class="bc-conn-bot"></div></div>';
+    el.innerHTML = h;
     return el;
   }
 
-  function roundLabelEl(text) {
+  function mkCol(cls, label, innerHtml) {
     const el = document.createElement('div');
-    el.className = 'bc-round-label';
-    el.textContent = text;
+    el.className = 'bc-col ' + cls;
+    const lbl = document.createElement('div');
+    lbl.className = 'bc-round-label';
+    lbl.textContent = label;
+    el.appendChild(lbl);
+    el.innerHTML += innerHtml;
     return el;
   }
 
-  // ── build one bracket half ─────────────────────────────────────────────────
-  function buildHalf(halfDef, isRight) {
-    const wrap = document.createElement('div');
-    wrap.className = 'bracket-half' + (isRight ? ' bracket-half-right' : ' bracket-half-left');
+  const pr = (...cards) => `<div class="bc-pair">${cards.join('')}</div>`;
 
-    const r32Games = halfDef.r32_order.map(i => r32[i]);
+  // ── R32 ────────────────────────────────────────────────────────────────────
+  const r32Html = R32_GROUPS.map(([a,b]) => pr(r32Card(r32[a]), r32Card(r32[b]))).join('');
 
-    // R32 column
-    const r32Col = document.createElement('div');
-    r32Col.className = 'bc-col bc-col-r32';
-    r32Col.appendChild(roundLabelEl('Round of 32'));
-    for (let i = 0; i < 4; i++) {
-      const pair = document.createElement('div');
-      pair.className = 'bc-pair';
-      pair.innerHTML = r32Card(r32Games[i * 2]) + r32Card(r32Games[i * 2 + 1]);
-      r32Col.appendChild(pair);
-    }
+  // ── R16 ────────────────────────────────────────────────────────────────────
+  const r16Html = R16_GROUPS.map(([m1,m2], i) => {
+    const [a1,b1] = R32_GROUPS[i*2], [a2,b2] = R32_GROUPS[i*2+1];
+    return pr(
+      tbdCard(`M${m1}`, `W ${r32[a1].match_id}`, `W ${r32[b1].match_id}`),
+      tbdCard(`M${m2}`, `W ${r32[a2].match_id}`, `W ${r32[b2].match_id}`)
+    );
+  }).join('');
 
-    // R16 column
-    const r16Col = document.createElement('div');
-    r16Col.className = 'bc-col bc-col-r16';
-    r16Col.appendChild(roundLabelEl('Round of 16'));
-    for (let i = 0; i < 2; i++) {
-      const pair = document.createElement('div');
-      pair.className = 'bc-pair';
-      for (let j = 0; j < 2; j++) {
-        const r16idx   = halfDef.r16_order[i * 2 + j];
-        const [rA, rB] = R16_PAIRS[r16idx];
-        pair.innerHTML += tbdCard(`M${89 + r16idx}`,
-          `W ${r32[rA].match_id}`, `W ${r32[rB].match_id}`);
-      }
-      r16Col.appendChild(pair);
-    }
+  // ── QF ─────────────────────────────────────────────────────────────────────
+  const qfHtml = QF_GROUPS.map(([q1,q2], i) => pr(
+    tbdCard(`M${q1}`, `W M${R16_GROUPS[i*2][0]}`, `W M${R16_GROUPS[i*2][1]}`, 'bc-game-qf'),
+    tbdCard(`M${q2}`, `W M${R16_GROUPS[i*2+1][0]}`, `W M${R16_GROUPS[i*2+1][1]}`, 'bc-game-qf')
+  )).join('');
 
-    // QF column
-    const qfCol = document.createElement('div');
-    qfCol.className = 'bc-col bc-col-qf';
-    qfCol.appendChild(roundLabelEl('Quarter-Final'));
-    halfDef.qf_order.forEach(qfIdx => {
-      const [r16a, r16b] = QF_PAIRS[qfIdx];
-      qfCol.innerHTML += tbdCard(`M${97 + qfIdx}`,
-        `W M${89 + r16a}`, `W M${89 + r16b}`, 'bc-game-qf');
-    });
+  // ── SF ─────────────────────────────────────────────────────────────────────
+  const sfHtml = pr(
+    tbdCard('M101', `W M${QF_GROUPS[0][0]}`, `W M${QF_GROUPS[0][1]}`, 'bc-game-sf'),
+    tbdCard('M102', `W M${QF_GROUPS[1][0]}`, `W M${QF_GROUPS[1][1]}`, 'bc-game-sf')
+  );
 
-    // SF column
-    const sfCol = document.createElement('div');
-    sfCol.className = 'bc-col bc-col-sf';
-    sfCol.appendChild(roundLabelEl('Semi-Final'));
-    const [qfa, qfb] = [halfDef.qf_order[0], halfDef.qf_order[1]];
-    sfCol.innerHTML += tbdCard(`M${101 + halfDef.sf_idx}`,
-      `W M${97 + qfa}`, `W M${97 + qfb}`, 'bc-game-sf');
+  // ── Final ──────────────────────────────────────────────────────────────────
+  const finHtml = tbdCard('M103 &middot; 19 Jul &middot; MetLife', 'W M101', 'W M102', 'bc-game-final');
 
-    const colOrder = isRight
-      ? [sfCol, connectors(1), qfCol, connectors(2), r16Col, connectors(4), r32Col]
-      : [r32Col, connectors(4), r16Col, connectors(2), qfCol, connectors(1), sfCol];
-
-    colOrder.forEach(c => wrap.appendChild(c));
-    return wrap;
-  }
-
-  // ── assemble ───────────────────────────────────────────────────────────────
-  const leftHalf  = buildHalf(BRACKET_HALVES[0], false);
-  const rightHalf = buildHalf(BRACKET_HALVES[1], true);
-
-  const finalWrap = document.createElement('div');
-  finalWrap.className = 'bc-final-wrap';
-  finalWrap.innerHTML = `
-    <div class="bc-final-label">&#127942; FINAL</div>
-    <div class="bc-game bc-game-final">
-      <div class="bc-label">M103 &middot; 19 Jul &middot; MetLife</div>
-      <div class="bc-tbd-row">W M101</div>
-      <div class="bc-tbd-row">W M102</div>
-    </div>
-  `;
-
-  container.appendChild(leftHalf);
-  container.appendChild(finalWrap);
-  container.appendChild(rightHalf);
+  // ── Assemble ───────────────────────────────────────────────────────────────
+  [
+    mkCol('bc-col-r32',   'Round of 32',   r32Html),
+    connectors(8),
+    mkCol('bc-col-r16',   'Round of 16',   r16Html),
+    connectors(4),
+    mkCol('bc-col-qf',    'Quarter-Final', qfHtml),
+    connectors(2),
+    mkCol('bc-col-sf',    'Semi-Final',    sfHtml),
+    connectors(1),
+    mkCol('bc-col-final', 'Final',         finHtml),
+  ].forEach(el => container.appendChild(el));
+}
 }
 // ── 3RD PLACE LIVE TRACKER ───────────────────────────────────────────────────
 function renderThirdPlaceTracker() {
