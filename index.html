@@ -38,6 +38,7 @@
   <div class="container-xl">
     <ul class="nav nav-tabs" id="mainTabs">
       <li class="nav-item"><a class="nav-link active" href="#" data-tab="groups">Group Stage</a></li>
+      <li class="nav-item"><a class="nav-link" href="#" data-tab="knockout">Knockout</a></li>
       <li class="nav-item"><a class="nav-link" href="#" data-tab="team">Team View</a></li>
       <li class="nav-item"><a class="nav-link" href="#" data-tab="third">3rd-Place Guide</a></li>
       <li class="nav-item"><a class="nav-link" href="#" data-tab="probs">Win Odds</a></li>
@@ -149,6 +150,21 @@
   </div>
 </div>
 
+
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<!-- TAB: KNOCKOUT BRACKET                                                       -->
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<div id="tab-knockout" class="tab-pane">
+  <div class="container-xl">
+    <div class="d-flex align-items-center gap-4 mb-3" style="flex-wrap:wrap;font-size:0.80rem;color:var(--text2)">
+      <span><span class="ko-legend-dot" style="background:var(--blue)"></span>Confirmed qualifier</span>
+      <span><span class="ko-legend-dot" style="background:var(--green)"></span>Win probability (favourite)</span>
+      <span><span class="ko-legend-dot" style="background:var(--text3)"></span>Win probability (underdog)</span>
+      <span style="color:var(--text3)">Percentages on undetermined slots = probability of occupying that slot</span>
+    </div>
+    <div class="bracket-tree-wrap" id="bracket-tree"></div>
+  </div>
+</div>
 
 <!-- ══════════════════════════════════════════════════════════════════════════ -->
 <!-- TAB 6: TEAM VIEW                                                           -->

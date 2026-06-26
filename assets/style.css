@@ -375,3 +375,66 @@ a:hover { color: #79b8ff; }
 }
 .sortable-th:hover { color: var(--text); }
 .sort-icon { margin-left: 4px; opacity: 0.5; font-size: 0.75em; }
+
+/* ── Knockout bracket — legend dot ───────────────────────────────────────── */
+.ko-legend-dot {
+  display: inline-block;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  margin-right: 5px;
+  vertical-align: middle;
+}
+
+/* ── Knockout bracket — flag images ─────────────────────────────────────── */
+.bc-flag {
+  width: 20px;
+  height: 15px;
+  object-fit: cover;
+  border-radius: 1px;
+  flex-shrink: 0;
+  display: block;
+}
+
+/* ── Knockout bracket — improved team rows ────────────────────────────────── */
+.bc-team-row {
+  display: flex;
+  align-items: center;
+  padding: 5px 7px;
+  gap: 6px;
+  border-bottom: 1px solid #21262d;
+  min-height: 30px;
+}
+.bc-team-row:last-child { border-bottom: none; }
+.bc-team-row .bc-name {
+  flex: 1;
+  font-size: 0.77rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text);
+}
+.bc-team-row.bc-confirmed .bc-name { color: var(--blue); font-weight: 700; }
+.bc-team-row .bc-win-pct { font-size: 0.74rem; flex-shrink: 0; min-width: 30px; text-align: right; }
+.bc-pct-fav { color: var(--green) !important; font-weight: 700; }
+.bc-pct-dog { color: var(--text3) !important; }
+.bc-pct-slot { color: var(--text3) !important; font-weight: 400; }
+
+/* Widen game cards slightly to fit flags */
+.bc-game { min-width: 160px !important; max-width: 182px !important; }
+
+/* Round-of-32 label chip */
+.bc-round-label {
+  font-size: 0.60rem; font-weight: 700; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--text3);
+  text-align: center; padding: 6px 0 2px;
+}
+
+/* TBD rows in R16+ cards */
+.bc-tbd-row {
+  display: flex; align-items: center;
+  padding: 6px 8px; gap: 5px;
+  border-bottom: 1px solid #21262d;
+  min-height: 30px;
+  font-size: 0.73rem; color: var(--text3); font-style: italic;
+}
+.bc-tbd-row:last-child { border-bottom: none; }
