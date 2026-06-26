@@ -305,29 +305,55 @@ function renderKnockout() {
     </div>`;
   }
 
-  // R32 match card: flags + team names + h2h win probability when available
+  // R32 match card: up to 2 teams per slot, h2h win prob when both confirmed (p >= 0.85)
   function r32Card(gm) {
-    const topA = (gm.slot_a_teams || [])[0];
-    const topB = (gm.slot_b_teams || [])[0];
-    const h2h  = gm.h2h;
-    const confA = topA && topA.p >= 0.95;
-    const confB = topB && topB.p >= 0.95;
-    const showH2H = h2h && topA && topB;
+    const slotA = gm.slot_a_teams || [];
+    const slotB = gm.slot_b_teams || [];
+    const h2h   = gm.h2h;
 
-    const pAWins = showH2H ? h2h.p_a_wins : undefined;
-    const pBWins = showH2H ? (1 - h2h.p_a_wins) : undefined;
-    const slotPA = (!confA && topA) ? topA.p : undefined;
-    const slotPB = (!confB && topB) ? topB.p : undefined;
+    const topA  = slotA[0];
+    const altA  = slotA.length > 1 && slotA[1].p >= 0.04 ? slotA[1] : null;
+    const topB  = slotB[0];
+    const altB  = slotB.length > 1 && slotB[1].p >= 0.04 ? slotB[1] : null;
 
-    const slotDesc = `<span style="color:var(--text3)">${gm.slot_a} vs ${gm.slot_b}</span>`;
-    const rowA = topA ? teamRow(topA.team, confA, pAWins, slotPA)
-                      : '<div class="bc-tbd-row">—</div>';
-    const rowB = topB ? teamRow(topB.team, confB, pBWins, slotPB)
-                      : '<div class="bc-tbd-row">—</div>';
+    // Only show h2h win probability when both primary teams are near-certain (p >= 0.85)
+    const confA  = topA && topA.p >= 0.85;
+    const confB  = topB && topB.p >= 0.85;
+    const useH2H = h2h && confA && confB;
+
+    // Build one slot's HTML (primary team + optional secondary)
+    function slotHtml(primary, secondary, isConf, winProb) {
+      if (!primary) return '<div class="bc-tbd-row">—</div>';
+
+      let pHtml = '';
+      if (useH2H && winProb !== undefined) {
+        const fav = winProb >= 0.5;
+        pHtml = `<span class="bc-win-pct ${fav ? 'bc-pct-fav' : 'bc-pct-dog'}">${(winProb * 100).toFixed(0)}%</span>`;
+      } else if (!isConf) {
+        pHtml = `<span class="bc-win-pct bc-pct-slot">${(primary.p * 100).toFixed(0)}%</span>`;
+      }
+
+      const rows = `<div class="bc-team-row${isConf ? ' bc-confirmed' : ''}">
+        ${flagImg(primary.team)}<span class="bc-name">${primary.team}</span>${pHtml}
+      </div>`;
+
+      const altRow = (!useH2H && secondary)
+        ? `<div class="bc-team-row bc-team-alt">
+            ${flagImg(secondary.team)}<span class="bc-name">${secondary.team}</span>
+            <span class="bc-win-pct bc-pct-dim">${(secondary.p * 100).toFixed(0)}%</span>
+          </div>`
+        : '';
+      return rows + altRow;
+    }
+
+    const pA = useH2H ? h2h.p_a_wins       : undefined;
+    const pB = useH2H ? 1 - h2h.p_a_wins   : undefined;
+
     return `<div class="bc-game">
-      <div class="bc-label">${gm.match_id} &middot; ${slotDesc}</div>
-      ${rowA}
-      ${rowB}
+      <div class="bc-label">${gm.match_id} &middot; <span class="bc-slot-lbl">${gm.slot_a} vs ${gm.slot_b}</span></div>
+      ${slotHtml(topA, altA, confA, pA)}
+      <div class="bc-slot-div"></div>
+      ${slotHtml(topB, altB, confB, pB)}
     </div>`;
   }
 
@@ -341,11 +367,11 @@ function renderKnockout() {
     </div>`;
   }
 
-  // n connector pairs
+  // n connector pairs; spacer at top matches bc-round-label height so lines align with match cards
   function connectors(n) {
     const el = document.createElement('div');
     el.className = 'bc-connectors';
-    let html = '';
+    let html = '<div class="bc-conn-spacer"></div>';
     for (let i = 0; i < n; i++) {
       html += '<div class="bc-conn-pair"><div class="bc-conn-top"></div><div class="bc-conn-bot"></div></div>';
     }
