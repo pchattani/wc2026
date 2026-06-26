@@ -293,14 +293,25 @@ function renderKnockout() {
       : '<span style="width:20px;height:15px;display:inline-block;flex-shrink:0"></span>';
   }
 
-  // showWin: only true when the opposing slot is also confirmed (both teams known).
-  function slotRow(teams, showWin) {
+  function isConfirmedSlot(teams) {
+    const v = teams.filter(t => t.p >= 0.03);
+    return v.length === 1 && v[0].p >= 0.85;
+  }
+
+  // Win probs only shown once every single R32 slot is confirmed.
+  const allR32Confirmed = r32.every(gm =>
+    isConfirmedSlot(gm.slot_a_teams || []) && isConfirmedSlot(gm.slot_b_teams || [])
+  );
+
+  // showWin: true only when all R32 slots are confirmed (tournament bracket is fully set).
+  // Confirmed slot + showWin → win %. Confirmed slot + no showWin → just name. Unconfirmed → slot %.
+  function slotRow(teams) {
     const visible = teams.filter(t => t.p >= 0.03);
     if (!visible.length) return '<div class="bc-slot-row"><span class="bc-tbd-inline">TBD</span></div>';
-    const confirmed = visible.length === 1 && visible[0].p >= 0.85;
+    const confirmed = isConfirmedSlot(teams);
     const parts = visible.map(t => {
       let pct = '';
-      if (showWin && confirmed && t.p_win != null) {
+      if (allR32Confirmed && confirmed && t.p_win != null) {
         const fav = t.p_win >= 0.5;
         pct = `<span class="bc-inline-pct ${fav ? 'bc-ipct-fav' : 'bc-ipct-dog'}">(${(t.p_win * 100).toFixed(0)}%)</span>`;
       } else if (!confirmed) {
@@ -312,19 +323,13 @@ function renderKnockout() {
     return `<div class="bc-slot-row">${parts.join('<span class="bc-sep">/</span>')}</div>`;
   }
 
-  function isConfirmedSlot(teams) {
-    const visible = teams.filter(t => t.p >= 0.03);
-    return visible.length === 1 && visible[0].p >= 0.85;
-  }
-
   function r32Card(gm) {
     const slotA = gm.slot_a_teams || [], slotB = gm.slot_b_teams || [];
-    const bothConfirmed = isConfirmedSlot(slotA) && isConfirmedSlot(slotB);
     return `<div class="bc-game">
       <div class="bc-label">${gm.match_id} &middot; <span class="bc-slot-lbl">${gm.slot_a} vs ${gm.slot_b}</span></div>
-      ${slotRow(slotA, bothConfirmed)}
+      ${slotRow(slotA)}
       <div class="bc-slot-div"></div>
-      ${slotRow(slotB, bothConfirmed)}
+      ${slotRow(slotB)}
     </div>`;
   }
 
