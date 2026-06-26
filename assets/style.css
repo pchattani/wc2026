@@ -147,11 +147,21 @@ body {
   gap: 0;
 }
 
-/* Each pair of R32 games that feed one R16 match */
+/* Each pair of games that feed the next round */
 .bc-pair {
   display: flex;
   flex-direction: column;
   flex: 1;
+}
+
+/* Each half of a pair — centers the game card vertically in its allocated space */
+.bc-slot {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 2px 0;
 }
 
 /* Game box */
