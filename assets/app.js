@@ -305,55 +305,37 @@ function renderKnockout() {
     </div>`;
   }
 
-  // R32 match card: up to 2 teams per slot, h2h win prob when both confirmed (p >= 0.85)
+  // R32 match card — all potential teams for each slot shown inline as
+  // "Team A (win%) / Team B (win%)" where win% = P(advance from this match | in slot).
   function r32Card(gm) {
     const slotA = gm.slot_a_teams || [];
     const slotB = gm.slot_b_teams || [];
-    const h2h   = gm.h2h;
 
-    const topA  = slotA[0];
-    const altA  = slotA.length > 1 && slotA[1].p >= 0.04 ? slotA[1] : null;
-    const topB  = slotB[0];
-    const altB  = slotB.length > 1 && slotB[1].p >= 0.04 ? slotB[1] : null;
+    // Render one slot as an inline row: Flag Name (win%) / Flag Name (win%) / ...
+    function slotRow(teams, isSlotA) {
+      const visible = teams.filter(t => t.p >= 0.03);
+      if (!visible.length) return '<div class="bc-slot-row"><span class="bc-tbd-inline">TBD</span></div>';
 
-    // Only show h2h win probability when both primary teams are near-certain (p >= 0.85)
-    const confA  = topA && topA.p >= 0.85;
-    const confB  = topB && topB.p >= 0.85;
-    const useH2H = h2h && confA && confB;
+      const confirmed = visible.length === 1 && visible[0].p >= 0.90;
+      const parts = visible.map((t, idx) => {
+        // p_win = conditional P(team wins this match | team is in slot)
+        const pWin = t.p_win != null ? t.p_win : null;
+        const pct  = pWin != null
+          ? `<span class="bc-inline-pct ${pWin >= 0.5 ? 'bc-ipct-fav' : 'bc-ipct-dog'}">(${(pWin * 100).toFixed(0)}%)</span>`
+          : (t.p < 0.96 ? `<span class="bc-inline-pct bc-ipct-slot">(${(t.p * 100).toFixed(0)}%)</span>` : '');
+        const nameCls = (confirmed && idx === 0) ? ' class="bc-name bc-conf-name"' : ' class="bc-name"';
+        return `<span class="bc-inline-team">${flagImg(t.team)}<span${nameCls}>${t.team}</span>${pct}</span>`;
+      });
 
-    // Build one slot's HTML (primary team + optional secondary)
-    function slotHtml(primary, secondary, isConf, winProb) {
-      if (!primary) return '<div class="bc-tbd-row">—</div>';
-
-      let pHtml = '';
-      if (useH2H && winProb !== undefined) {
-        const fav = winProb >= 0.5;
-        pHtml = `<span class="bc-win-pct ${fav ? 'bc-pct-fav' : 'bc-pct-dog'}">${(winProb * 100).toFixed(0)}%</span>`;
-      } else if (!isConf) {
-        pHtml = `<span class="bc-win-pct bc-pct-slot">${(primary.p * 100).toFixed(0)}%</span>`;
-      }
-
-      const rows = `<div class="bc-team-row${isConf ? ' bc-confirmed' : ''}">
-        ${flagImg(primary.team)}<span class="bc-name">${primary.team}</span>${pHtml}
-      </div>`;
-
-      const altRow = (!useH2H && secondary)
-        ? `<div class="bc-team-row bc-team-alt">
-            ${flagImg(secondary.team)}<span class="bc-name">${secondary.team}</span>
-            <span class="bc-win-pct bc-pct-dim">${(secondary.p * 100).toFixed(0)}%</span>
-          </div>`
-        : '';
-      return rows + altRow;
+      const sep = '<span class="bc-sep">/</span>';
+      return `<div class="bc-slot-row">${parts.join(sep)}</div>`;
     }
-
-    const pA = useH2H ? h2h.p_a_wins       : undefined;
-    const pB = useH2H ? 1 - h2h.p_a_wins   : undefined;
 
     return `<div class="bc-game">
       <div class="bc-label">${gm.match_id} &middot; <span class="bc-slot-lbl">${gm.slot_a} vs ${gm.slot_b}</span></div>
-      ${slotHtml(topA, altA, confA, pA)}
+      ${slotRow(slotA, true)}
       <div class="bc-slot-div"></div>
-      ${slotHtml(topB, altB, confB, pB)}
+      ${slotRow(slotB, false)}
     </div>`;
   }
 

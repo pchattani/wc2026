@@ -240,10 +240,10 @@ body {
 }
 
 /* Column widths per round */
-.bc-col-r32  { min-width: 148px; }
-.bc-col-r16  { min-width: 148px; }
-.bc-col-qf   { min-width: 148px; flex-direction: column; justify-content: space-around; gap: 0; }
-.bc-col-sf   { min-width: 148px; flex-direction: column; justify-content: center; }
+.bc-col-r32  { min-width: 190px; }
+.bc-col-r16  { min-width: 180px; }
+.bc-col-qf   { min-width: 175px; flex-direction: column; justify-content: space-around; gap: 0; }
+.bc-col-sf   { min-width: 170px; flex-direction: column; justify-content: center; }
 
 /* QF + SF pairs should space out like pairs */
 .bc-col-qf,
@@ -392,35 +392,66 @@ a:hover { color: #79b8ff; }
   object-fit: cover;
   border-radius: 1px;
   flex-shrink: 0;
-  display: block;
+  display: inline-block;
+  vertical-align: middle;
 }
 
-/* ── Knockout bracket — improved team rows ────────────────────────────────── */
-.bc-team-row {
+/* ── Knockout bracket — inline slot rows (Team A (win%) / Team B (win%)) ─── */
+
+/* One slot row inside a match card */
+.bc-slot-row {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  padding: 5px 7px;
-  gap: 6px;
-  border-bottom: 1px solid #21262d;
+  padding: 5px 8px;
+  gap: 2px 4px;
   min-height: 30px;
 }
-.bc-team-row:last-child { border-bottom: none; }
-.bc-team-row .bc-name {
-  flex: 1;
-  font-size: 0.77rem;
+
+/* One team within a slot row: flag + name + pct */
+.bc-inline-team {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  color: var(--text);
 }
-.bc-team-row.bc-confirmed .bc-name { color: var(--blue); font-weight: 700; }
-.bc-team-row .bc-win-pct { font-size: 0.74rem; flex-shrink: 0; min-width: 30px; text-align: right; }
+
+.bc-name {
+  font-size: 0.76rem;
+  color: var(--text);
+  font-weight: 500;
+}
+.bc-conf-name {
+  color: var(--blue) !important;
+  font-weight: 700;
+}
+
+/* Percentage chip after team name */
+.bc-inline-pct {
+  font-size: 0.70rem;
+  font-weight: 600;
+}
+.bc-ipct-fav  { color: var(--green); }
+.bc-ipct-dog  { color: var(--text2); }
+.bc-ipct-slot { color: var(--text3); font-weight: 400; }
+
+/* "/" separator between teams in same slot */
+.bc-sep {
+  color: var(--text3);
+  font-size: 0.68rem;
+  padding: 0 1px;
+  flex-shrink: 0;
+}
+
+/* TBD when no team data */
+.bc-tbd-inline { color: var(--text3); font-style: italic; font-size: 0.73rem; }
+
+/* Keep old pct classes referenced in TBD rows etc */
 .bc-pct-fav { color: var(--green) !important; font-weight: 700; }
 .bc-pct-dog { color: var(--text3) !important; }
-.bc-pct-slot { color: var(--text3) !important; font-weight: 400; }
 
-/* Wider game cards for multi-team display */
-.bc-game { min-width: 175px !important; max-width: 210px !important; }
+/* Wider game cards for inline team format */
+.bc-game { min-width: 190px !important; max-width: 240px !important; }
 
 /* Round label — fixed height so connector spacer can match */
 .bc-round-label {
