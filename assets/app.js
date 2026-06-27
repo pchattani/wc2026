@@ -132,19 +132,26 @@ function renderProbs() {
   // Stage probability table — all 48 teams, sortable
   const tbody = document.getElementById('probs-table-body');
   tbody.innerHTML = '';
+  const pct = v => (v * 100).toFixed(1) + '%';
+  // For tiny but nonzero probs that round to 0.0%, show "<0.1%" so it's clear the team isn't eliminated.
+  const fmtP = v => {
+    if (v === 0) return '<span style="color:var(--text3);font-style:italic">Elim.</span>';
+    if (v < 0.001) return '<span style="color:var(--text3)">&lt;0.1%</span>';
+    return pct(v);
+  };
   teams.forEach((t, idx) => {
     const tr = document.createElement('tr');
-    const pct = v => (v * 100).toFixed(1) + '%';
+    if (t.eliminated) tr.style.opacity = '0.45';
     tr.innerHTML = `
       <td><span style="color:${CONF_COLORS[t.confederation]};margin-right:6px">■</span>
           <strong>${t.team}</strong>
           <span style="font-size:0.7rem;color:var(--text3);margin-left:4px">#${t.fifa_rank}</span></td>
-      <td class="td-num">${pct(t.p_r32)}</td>
-      <td class="td-num">${pct(t.p_r16)}</td>
-      <td class="td-num">${pct(t.p_qf)}</td>
-      <td class="td-num">${pct(t.p_sf)}</td>
-      <td class="td-num">${pct(t.p_final)}</td>
-      <td class="td-num" style="color:var(--blue);font-weight:600">${pct(t.p_win)}</td>
+      <td class="td-num">${fmtP(t.p_r32)}</td>
+      <td class="td-num">${t.eliminated ? '—' : pct(t.p_r16)}</td>
+      <td class="td-num">${t.eliminated ? '—' : pct(t.p_qf)}</td>
+      <td class="td-num">${t.eliminated ? '—' : pct(t.p_sf)}</td>
+      <td class="td-num">${t.eliminated ? '—' : pct(t.p_final)}</td>
+      <td class="td-num" style="color:${t.eliminated ? 'var(--text3)' : 'var(--blue)'};font-weight:600">${t.eliminated ? '—' : pct(t.p_win)}</td>
     `;
     tbody.appendChild(tr);
   });
