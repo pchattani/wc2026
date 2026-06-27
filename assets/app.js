@@ -295,7 +295,7 @@ function renderKnockout() {
 
   function isConfirmedSlot(teams) {
     const v = teams.filter(t => t.p >= 0.03);
-    return v.length === 1 && v[0].p >= 0.85;
+    return v.length === 1 && v[0].p >= 0.9999;
   }
 
   // Win probs only shown once every single R32 slot is confirmed.
