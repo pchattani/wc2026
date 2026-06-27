@@ -21,7 +21,7 @@
     <div class="d-flex justify-content-between align-items-center py-3">
       <div>
         <h1 class="site-title">⚽ WC 2026 Probability Dashboard</h1>
-        <p class="site-sub">Monte Carlo simulation · 10,000 runs · Dixon-Coles + Elo ensemble · Updates hourly</p>
+        <p class="site-sub">Monte Carlo simulation · 100,000 runs · Dixon-Coles + Elo ensemble · Updates hourly</p>
         <p class="site-sub" style="margin-top:2px;font-size:0.75rem;color:var(--text3)">
           48 teams · 12 groups · Top 2 + best 8 third-place → Round of 32
         </p>
@@ -228,7 +228,7 @@
 
       <h4>Third-Place Qualification</h4>
       <p>The <strong>8 best third-place finishers</strong> across all 12 groups advance to the Round of 32. "Best" is determined by overall group-stage record (points → goal difference → goals scored) — H2H does not apply since third-place teams come from different groups. The 8 qualifiers are then assigned to specific R32 slots according to the official FIFA slot-assignment table, which maps which group the third-place team came from to which bracket position they occupy.</p>
-      <p>The <strong>3rd-Place Guide</strong> tab shows the simulation's estimate of P(qualify | pts, GD), derived by tracking every third-place team across all 10,000 simulations and recording whether they made the cut.</p>
+      <p>The <strong>3rd-Place Guide</strong> tab shows the simulation's estimate of P(qualify | pts, GD), derived by tracking every third-place team across all 100,000 simulations and recording whether they made the cut.</p>
 
       <h4>Knockout Rounds</h4>
       <p>The bracket follows the <strong>official FIFA WC 2026 draw</strong>. R32 winners advance to R16, R16 winners to QF, QF winners to SF, and SF winners to the Final. No group-based seeding is applied in the knockout rounds — the bracket is fixed from the R32 draw. Extra time and penalty shootouts are simulated using the same match model for draws at full time.</p>
@@ -256,7 +256,7 @@
       <table class="method-table">
         <thead><tr><th>Parameter</th><th>Value</th><th>Notes</th></tr></thead>
         <tbody>
-          <tr><td>Monte Carlo iterations</td><td>10,000</td><td>Per hourly run</td></tr>
+          <tr><td>Monte Carlo iterations</td><td>100,000</td><td>Per hourly run</td></tr>
           <tr><td>Random seed</td><td>42</td><td>Reproducible within a run; seed changes with live data</td></tr>
           <tr><td>Score model</td><td>Dixon-Coles bivariate Poisson</td><td>With ρ low-score correction</td></tr>
           <tr><td>Prior</td><td>FIFA Elo (June 2026 rankings)</td><td>Blended with MLE as data arrives</td></tr>
@@ -275,7 +275,7 @@
 <div style="border-top:1px solid var(--border);padding:20px 0;margin-top:30px">
   <div class="container-xl" style="font-size:0.72rem;color:var(--text3);line-height:1.6">
     <strong style="color:var(--text2)">Methodology:</strong>
-    Tournament probabilities computed via 10,000 Monte Carlo simulations using a
+    Tournament probabilities computed via 100,000 Monte Carlo simulations using a
     Dixon-Coles score model (trained on WC 2026 group stage results) blended with a
     FIFA-ranking Elo prior. Group tiebreakers follow the official WC 2026 rules
     (overall pts → H2H pts → H2H GD → H2H GF → overall GD → overall GF).
