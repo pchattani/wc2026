@@ -195,15 +195,18 @@
       <h3>Prediction Model</h3>
 
       <h4>Dixon-Coles Score Model</h4>
-      <p>The primary match model is a <strong>Dixon-Coles bivariate Poisson model</strong>, which predicts the joint distribution of (home goals, away goals) for any match. It models each team's attacking and defensive strength as latent parameters, and includes a low-score correction factor (the Dixon-Coles ρ parameter) that adjusts for the empirically observed excess frequency of 0-0, 1-0, 0-1, and 1-1 scorelines.</p>
-      <p>The model is fitted on completed group-stage matches from WC 2026 using maximum likelihood estimation. Before sufficient live data is available, all teams' attacking and defensive parameters are initialised from a FIFA Elo prior (see below) so that the model produces sensible probabilities from match day 1.</p>
+      <p>The primary match model is a <strong>Dixon-Coles bivariate Poisson model</strong>, which predicts the joint distribution of (home goals, away goals) for any match. It estimates each team's attacking and defensive strength as latent parameters, fitted via maximum likelihood, and includes a low-score correction factor (the ρ parameter) that adjusts for the empirically observed excess of 0-0, 1-0, 0-1, and 1-1 scorelines. An L2 regularisation penalty (ridge = 1.0) is applied to prevent degenerate attack/defence estimates for teams with limited data.</p>
+      <p>The model is trained on <strong>~2,100 international matches</strong> from 2022 to present — including all completed WC 2026 group-stage matches — using time-decay weighting so that recent results carry more influence (half-life ≈ 400 days). Match importance is also weighted by competition tier: World Cup matches receive full weight (1.0), UEFA Euro and Copa América 0.88, AFCON/AFC 0.85, Nations League 0.72, qualifying 0.60–0.62, and friendlies 0.30.</p>
 
-      <h4>FIFA-Ranking Elo Prior</h4>
-      <p>Team strengths are seeded from <strong>FIFA rankings converted to an Elo-style rating</strong> using the official 2026 pre-tournament rankings. The Elo ratings are used to set the initial Dixon-Coles λ (attack) and μ (defence) parameters via a log-link, so that better-ranked teams start with higher expected goals for and lower expected goals against.</p>
-      <p>As live match data accumulates during the tournament, the Dixon-Coles MLE update increasingly dominates the Elo prior, which is down-weighted proportionally to the number of observed goals. This blended approach avoids both the cold-start problem (no data before MD1) and the over-reaction problem (treating a single group-stage result as highly informative about team quality).</p>
+      <h4>Expected Goals (xG) Integration</h4>
+      <p>For matches where <strong>Expected Goals data</strong> is available, the model uses xG rather than actual goal counts as the observation. This reduces noise from finishing variance — a team that created 2.4 xG and scored 0 is treated as a stronger team than a 0 xG scoreline implies. xG data is sourced from <a href="https://github.com/statsbomb/open-data" target="_blank">StatsBomb Open Data</a> and covers 314 matches across 6 competitions (WC 2022, EURO 2024, Copa América 2024, AFCON 2023, EURO 2020, WC 2018). A calibration factor (≈ 0.84) is applied to align StatsBomb's xG scale with observed goal rates. Matches without xG data use conventional goal counts and the full Dixon-Coles ρ correction.</p>
 
-      <h4>Ensemble</h4>
-      <p>Match win/draw/loss probabilities are drawn from the <strong>Dixon-Coles + Elo ensemble</strong> using a weighted combination of the two models' predictions. The weights are fixed at roughly 60% Dixon-Coles / 40% Elo at the start of the tournament, shifting toward 80/20 once each team has played 2+ games. All World Cup matches are treated as neutral-venue games.</p>
+      <h4>Elo Ratings</h4>
+      <p>An independent <strong>Elo rating system</strong> is seeded from the official FIFA 2026 pre-tournament rankings (converted to a 1500-base Elo scale) and updated with a K-factor of 60 from each completed WC 2026 match in chronological order. The Elo model provides a stable long-run prior on team quality that is robust to small-sample noise, particularly for teams without rich recent tournament data.</p>
+      <p>The Elo model converts win probability to an implied pair of Poisson rates and builds a full score matrix, so it can produce scoreline distributions (not just win/draw/loss) consistent with the chosen probability. All WC matches are treated as neutral-venue games.</p>
+
+      <h4>70/30 Ensemble Blend</h4>
+      <p>Match outcome distributions are drawn from a <strong>70% Dixon-Coles / 30% Elo ensemble</strong>. Both the win/draw/loss probabilities <em>and</em> the underlying score matrices are blended in this 70/30 ratio, ensuring that goal-by-goal simulation samples scorelines consistent with the blended model — not just the DC or Elo component alone. The 30% Elo weight preserves mean-reversion toward established team quality (FIFA ranking) while letting recent xG-backed performance dominate. A 100K-simulation comparison showed this balance produces probabilities closest to market consensus across both traditional powers and recent overachievers.</p>
 
       <h3>Tournament Structure</h3>
 
@@ -257,9 +260,11 @@
       <table class="method-table">
         <thead><tr><th>Source</th><th>Data</th><th>Refresh</th></tr></thead>
         <tbody>
-          <tr><td><a href="https://www.football-data.org" target="_blank">football-data.org</a></td><td>Live group-stage match results and standings</td><td>Each hourly run</td></tr>
-          <tr><td>FIFA Official Rankings (June 2026)</td><td>Pre-tournament team ratings for Elo prior</td><td>Fixed at tournament start</td></tr>
-          <tr><td>FIFA WC 2026 Official Bracket</td><td>R32/R16/QF/SF slot assignments</td><td>Fixed</td></tr>
+          <tr><td><a href="https://www.football-data.org" target="_blank">football-data.org</a></td><td>Live WC 2026 group-stage match results and standings</td><td>Each hourly run</td></tr>
+          <tr><td><a href="https://github.com/martj42/international_results" target="_blank">martj42/international_results</a></td><td>~2,100 historical international matches from 2022–2026 (training data)</td><td>Fixed at build</td></tr>
+          <tr><td><a href="https://github.com/statsbomb/open-data" target="_blank">StatsBomb Open Data</a></td><td>xG data: WC 2022, EURO 2024, Copa Am 2024, AFCON 2023, EURO 2020, WC 2018 (314 matches)</td><td>Fixed at build</td></tr>
+          <tr><td>FIFA Official Rankings (June 2026)</td><td>Pre-tournament team ratings for Elo seeding</td><td>Fixed at tournament start</td></tr>
+          <tr><td>FIFA WC 2026 Official Bracket + Annex C</td><td>R32/R16/QF/SF slot assignments; third-place slot lookup (495 rows)</td><td>Fixed</td></tr>
         </tbody>
       </table>
 
@@ -268,10 +273,12 @@
         <thead><tr><th>Parameter</th><th>Value</th><th>Notes</th></tr></thead>
         <tbody>
           <tr><td>Monte Carlo iterations</td><td>100,000</td><td>Per hourly run</td></tr>
-          <tr><td>Random seed</td><td>42</td><td>Reproducible within a run; seed changes with live data</td></tr>
-          <tr><td>Score model</td><td>Dixon-Coles bivariate Poisson</td><td>With ρ low-score correction</td></tr>
-          <tr><td>Prior</td><td>FIFA Elo (June 2026 rankings)</td><td>Blended with MLE as data arrives</td></tr>
+          <tr><td>Random seed</td><td>42</td><td>Reproducible within a run</td></tr>
+          <tr><td>Score model</td><td>Dixon-Coles bivariate Poisson + xG</td><td>ρ low-score correction; xG used where available</td></tr>
+          <tr><td>Ensemble weights</td><td>70% Dixon-Coles / 30% Elo</td><td>Both score matrices blended at 70/30</td></tr>
+          <tr><td>Training data time decay</td><td>ξ = 0.0018 / day</td><td>Half-life ≈ 385 days; WC 2022 ≈ 10% weight</td></tr>
           <tr><td>Match venue</td><td>Neutral</td><td>No home-field adjustment</td></tr>
+          <tr><td>L2 regularisation</td><td>ridge = 1.0</td><td>Prevents degenerate attack/defence for data-sparse teams</td></tr>
           <tr><td>Tiebreakers</td><td>Full H2H rules (WC 2026 official)</td><td>FIFA ranking as final tiebreaker</td></tr>
         </tbody>
       </table>
@@ -287,11 +294,12 @@
   <div class="container-xl" style="font-size:0.72rem;color:var(--text3);line-height:1.6">
     <strong style="color:var(--text2)">Methodology:</strong>
     Tournament probabilities computed via 100,000 Monte Carlo simulations using a
-    Dixon-Coles score model (trained on WC 2026 group stage results) blended with a
-    FIFA-ranking Elo prior. Group tiebreakers follow the official WC 2026 rules
-    (overall pts → H2H pts → H2H GD → H2H GF → overall GD → overall GF).
-    The best-8 third-place qualification uses overall record (no H2H).
-    Bracket is the official FIFA WC 2026 draw. Live results from football-data.org.
+    Dixon-Coles bivariate Poisson model (with xG integration from StatsBomb Open Data,
+    trained on ~2,100 international matches since 2022 with time-decay weighting),
+    blended 70/30 with a FIFA-ranking Elo model. Group tiebreakers follow the official
+    WC 2026 rules (overall pts → H2H pts → H2H GD → H2H GF → overall GD → overall GF).
+    Best-8 third-place qualification uses overall record (no H2H); slot assignments
+    follow FIFA Annex C. Live results from football-data.org.
     <br><br>
     For questions or feedback: <a href="https://github.com/pchattani">@pchattani</a>
   </div>
