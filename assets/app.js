@@ -43,7 +43,7 @@ function renderTab(tabName) {
   if (tabName === 'knockout')     renderKnockout();
   if (tabName === 'third')        renderScenarios();
   if (tabName === 'team')         initTeamView();
-  // methodology tab is static HTML — no render function needed
+  if (tabName === 'methodology')  renderSimsCharts();
 }
 
 // ── Colours ───────────────────────────────────────────────────────────────────
@@ -411,6 +411,92 @@ function renderKnockout() {
     mkCol('bc-col-final', 'Final',         finHtml),
   ].forEach(el => container.appendChild(el));
 }
+// ── METHODOLOGY: SIMULATION COUNT CHARTS ─────────────────────────────────────
+function renderSimsCharts() {
+  const ns  = [5000, 10000, 15000, 25000, 50000, 100000, 150000, 200000];
+  const lbs = ns.map(n => (n / 1000) + 'K');
+  const se  = ns.map(n => parseFloat((0.5 / Math.sqrt(n) * 100).toFixed(3)));
+  const rt  = [3, 6, 8, 14, 28, 53, 83, 110];
+  const HI  = ns.indexOf(100000); // index 5
+
+  const pick = (hi, lo) => ns.map((_, i) => i === HI ? hi : lo);
+
+  // ── Chart 1: Standard Error curve ─────────────────────────────────────────
+  // Two traces: filled area + highlighted markers so 100K stands out.
+  Plotly.newPlot('chart-sims-se', [
+    {
+      x: lbs, y: se,
+      type: 'scatter', mode: 'lines',
+      fill: 'tozeroy', fillcolor: 'rgba(88,166,255,0.07)',
+      line: { color: '#58a6ff', width: 2 },
+      hoverinfo: 'skip',
+    },
+    {
+      x: lbs, y: se,
+      type: 'scatter', mode: 'markers',
+      marker: {
+        color: pick('#58a6ff', '#8b949e'),
+        size:  pick(11, 6),
+        line:  { color: pick('#e6edf3', 'rgba(0,0,0,0)'), width: pick(2, 0) },
+      },
+      hovertemplate: '<b>%{x}</b> — SE: ±%{y:.2f} pp<extra></extra>',
+    },
+  ], {
+    ...DARK_LAYOUT,
+    showlegend: false,
+    title: { text: 'Precision: Standard Error vs Simulations', font: { size: 12, color: '#8b949e' }, x: 0.5 },
+    margin: { t: 42, r: 18, b: 48, l: 56 },
+    xaxis: { ...DARK_LAYOUT.xaxis, title: { text: 'Simulations', font: { size: 11 } }, tickfont: { size: 10 } },
+    yaxis: { ...DARK_LAYOUT.yaxis, title: { text: 'SE (pp)', font: { size: 11 } }, tickfont: { size: 10 }, ticksuffix: ' pp', rangemode: 'tozero' },
+    shapes: [{
+      type: 'line', x0: '100K', x1: '100K', y0: 0, y1: 1, xref: 'x', yref: 'paper',
+      line: { color: 'rgba(88,166,255,0.45)', width: 1.5, dash: 'dot' },
+    }],
+    annotations: [{
+      x: '100K', y: se[HI],
+      text: '<b>100K</b><br>±0.16 pp',
+      showarrow: true, arrowhead: 2, arrowsize: 0.9, arrowcolor: '#58a6ff',
+      font: { color: '#58a6ff', size: 10 },
+      bgcolor: 'rgba(88,166,255,0.12)', bordercolor: 'rgba(88,166,255,0.5)', borderwidth: 1, borderpad: 4,
+      ax: 52, ay: -36,
+    }],
+  }, PLOTLY_CONF);
+
+  // ── Chart 2: Runtime bar chart ────────────────────────────────────────────
+  Plotly.newPlot('chart-sims-rt', [{
+    x: lbs, y: rt,
+    type: 'bar',
+    marker: {
+      color: pick('rgba(88,166,255,0.75)', 'rgba(48,54,61,0.85)'),
+      line: { color: pick('#58a6ff', '#6e7681'), width: 1 },
+    },
+    text: rt.map(v => v + 's'),
+    textposition: 'outside',
+    cliponaxis: false,
+    textfont: { size: 9.5, color: pick('#58a6ff', '#6e7681') },
+    hovertemplate: '<b>%{x}</b> — Runtime: %{y}s<extra></extra>',
+  }], {
+    ...DARK_LAYOUT,
+    showlegend: false,
+    title: { text: 'Compute Cost: Runtime per Hourly Run', font: { size: 12, color: '#8b949e' }, x: 0.5 },
+    margin: { t: 42, r: 18, b: 48, l: 56 },
+    xaxis: { ...DARK_LAYOUT.xaxis, title: { text: 'Simulations', font: { size: 11 } }, tickfont: { size: 10 } },
+    yaxis: { ...DARK_LAYOUT.yaxis, title: { text: 'Seconds', font: { size: 11 } }, tickfont: { size: 10 }, rangemode: 'tozero' },
+    shapes: [{
+      type: 'line', x0: '100K', x1: '100K', y0: 0, y1: 1, xref: 'x', yref: 'paper',
+      line: { color: 'rgba(88,166,255,0.45)', width: 1.5, dash: 'dot' },
+    }],
+    annotations: [{
+      x: '100K', y: rt[HI],
+      text: '<b>100K</b><br>53s / run',
+      showarrow: true, arrowhead: 2, arrowsize: 0.9, arrowcolor: '#58a6ff',
+      font: { color: '#58a6ff', size: 10 },
+      bgcolor: 'rgba(88,166,255,0.12)', bordercolor: 'rgba(88,166,255,0.5)', borderwidth: 1, borderpad: 4,
+      ax: 52, ay: -36,
+    }],
+  }, PLOTLY_CONF);
+}
+
 // ── 3RD PLACE LIVE TRACKER ───────────────────────────────────────────────────
 function renderThirdPlaceTracker() {
   const { groups, probs } = DATA;

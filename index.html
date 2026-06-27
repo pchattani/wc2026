@@ -20,11 +20,8 @@
   <div class="container-xl">
     <div class="d-flex justify-content-between align-items-center py-3">
       <div>
-        <h1 class="site-title">⚽ WC 2026 Probability Dashboard</h1>
+        <h1 class="site-title">🏆 WC 2026 Probability Dashboard</h1>
         <p class="site-sub">Monte Carlo simulation · 100,000 runs · Dixon-Coles + Elo ensemble · Updates hourly</p>
-        <p class="site-sub" style="margin-top:2px;font-size:0.75rem;color:var(--text3)">
-          48 teams · 12 groups · Top 2 + best 8 third-place → Round of 32
-        </p>
       </div>
       <div class="text-end">
         <span id="last-updated" class="badge-updated">Loading…</span>
@@ -192,7 +189,7 @@
     <div class="prose-dark mt-4">
 
       <h3>Overview</h3>
-      <p>Tournament probabilities are generated via <strong>10,000 Monte Carlo simulations</strong> of the full FIFA World Cup 2026. Each simulation samples independent match outcomes from a statistical model, applies the official group-stage tiebreaker rules, assigns the 8 best third-place finishers to their R32 slots, and carries results through R32 → R16 → QF → SF → Final. Aggregating across 10,000 runs gives each team a probability distribution over every stage of the tournament.</p>
+      <p>Tournament probabilities are generated via <strong>100,000 Monte Carlo simulations</strong> of the full FIFA World Cup 2026. Each simulation samples independent match outcomes from a statistical model, applies the official group-stage tiebreaker rules, assigns the 8 best third-place finishers to their R32 slots using the official FIFA Annex C table, and carries results through R32 → R16 → QF → SF → Final. Aggregating across 100,000 runs gives each team a probability distribution over every stage of the tournament.</p>
       <p>The simulation runs hourly using live match data from <a href="https://www.football-data.org" target="_blank">football-data.org</a>. As group matches complete, the model re-fits on observed results and group states are locked for finished matches — only the remaining matches in each group are simulated.</p>
 
       <h3>Prediction Model</h3>
@@ -226,12 +223,26 @@
       </ol>
       <p>H2H tiebreakers are computed on the sub-table of only the tied teams' mutual fixtures. If 3 or more teams are tied, the H2H rules are applied to the full sub-table of all tied teams simultaneously.</p>
 
-      <h4>Third-Place Qualification</h4>
-      <p>The <strong>8 best third-place finishers</strong> across all 12 groups advance to the Round of 32. "Best" is determined by overall group-stage record (points → goal difference → goals scored) — H2H does not apply since third-place teams come from different groups. The 8 qualifiers are then assigned to specific R32 slots according to the official FIFA slot-assignment table, which maps which group the third-place team came from to which bracket position they occupy.</p>
-      <p>The <strong>3rd-Place Guide</strong> tab shows the simulation's estimate of P(qualify | pts, GD), derived by tracking every third-place team across all 100,000 simulations and recording whether they made the cut.</p>
+      <h4>Third-Place Qualification and Slot Assignment (FIFA Annex C)</h4>
+      <p>The <strong>8 best third-place finishers</strong> across all 12 groups advance to the Round of 32. "Best" is determined by overall group-stage record (points → goal difference → goals scored). Head-to-head records do not apply here because the third-place teams come from different groups.</p>
+      <p>Once the 8 qualifying third-place teams are known, their R32 slot assignments are <strong>not random</strong> — they are determined by the official <strong>FIFA WC 2026 Regulations, Annex C</strong>. Annex C is a pre-specified lookup table with <strong>495 rows</strong>, one for each possible combination of which 8 of the 12 groups (A–L) supply the qualifying third-place teams (C(12, 8) = 495). Each row specifies exactly which R32 bracket slot each third-place team fills, ensuring the bracket always has a valid structure regardless of which groups qualify.</p>
+      <p>For example, if the 8 best third-place teams come from groups A, B, D, E, F, I, J, and L, Annex C prescribes precisely which slot in the R32 draw each of those groups' third-place finishers occupies — determining, for instance, whether the 3rd-place team from Group B faces the winner of Group D or the winner of Group E. The simulation looks up the correct Annex C row every iteration rather than using an approximation, so bracket path probabilities are exact under the official rules.</p>
+      <p>The <strong>3rd-Place Guide</strong> tab shows the simulation's estimate of P(qualify | pts, GD), derived by recording whether each simulated third-place team made the best-8 cut across all 100,000 runs.</p>
 
       <h4>Knockout Rounds</h4>
       <p>The bracket follows the <strong>official FIFA WC 2026 draw</strong>. R32 winners advance to R16, R16 winners to QF, QF winners to SF, and SF winners to the Final. No group-based seeding is applied in the knockout rounds — the bracket is fixed from the R32 draw. Extra time and penalty shootouts are simulated using the same match model for draws at full time.</p>
+
+      <h3>Why 100,000 Simulations?</h3>
+      <p>Each simulated tournament is an independent draw, so the estimated probability for any outcome is a sample proportion with a binomial standard error of SE = √(p(1−p) / n). This is maximised at p = 0.5, giving SE = 0.5 / √n. The charts below show how precision and runtime scale with simulation count, benchmarked on this server:</p>
+      <div class="row g-3 mt-2 mb-1">
+        <div class="col-12 col-md-6">
+          <div id="chart-sims-se" style="height:270px;background:var(--bg2);border:1px solid var(--border);border-radius:6px"></div>
+        </div>
+        <div class="col-12 col-md-6">
+          <div id="chart-sims-rt" style="height:270px;background:var(--bg2);border:1px solid var(--border);border-radius:6px"></div>
+        </div>
+      </div>
+      <p>At 100,000 simulations, a team estimated at 20% win probability has a 95% confidence interval of roughly [19.7%, 20.3%] — precise enough that hourly updates reflect genuine changes in the tournament state rather than sampling noise. The gains from going to 150K or 200K are marginal (≤0.05 pp improvement in SE) at the cost of doubling compute time per hourly run, so 100K is the practical sweet spot.</p>
 
       <h3>Limitations</h3>
       <p>All probabilistic models of sporting outcomes have real limitations. These estimates are particularly sensitive to a few known issues:</p>
