@@ -377,11 +377,12 @@ a:hover { color: #79b8ff; }
 /* One slot row inside a match card */
 .bc-slot-row {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   padding: 5px 8px;
   gap: 2px 4px;
   min-height: 30px;
+  overflow: hidden;
 }
 
 /* One team within a slot row: flag + name + pct */
