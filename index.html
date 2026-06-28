@@ -205,8 +205,8 @@
       <p>An independent <strong>Elo rating system</strong> is seeded from the official FIFA 2026 pre-tournament rankings (converted to a 1500-base Elo scale) and updated with a K-factor of 60 from each completed WC 2026 match in chronological order. The Elo model provides a stable long-run prior on team quality that is robust to small-sample noise, particularly for teams without rich recent tournament data.</p>
       <p>The Elo model converts win probability to an implied pair of Poisson rates and builds a full score matrix, so it can produce scoreline distributions (not just win/draw/loss) consistent with the chosen probability. All WC matches are treated as neutral-venue games.</p>
 
-      <h4>70/30 Ensemble Blend</h4>
-      <p>Match outcome distributions are drawn from a <strong>70% Dixon-Coles / 30% Elo ensemble</strong>. Both the win/draw/loss probabilities <em>and</em> the underlying score matrices are blended in this 70/30 ratio, ensuring that goal-by-goal simulation samples scorelines consistent with the blended model — not just the DC or Elo component alone. The 30% Elo weight preserves mean-reversion toward established team quality (FIFA ranking) while letting recent xG-backed performance dominate. A 100K-simulation comparison showed this balance produces probabilities closest to market consensus across both traditional powers and recent overachievers.</p>
+      <h4>50/50 Ensemble Blend</h4>
+      <p>Match outcome distributions are drawn from an equal-weight <strong>50% Dixon-Coles / 50% Elo ensemble</strong>. Both the win/draw/loss probabilities <em>and</em> the underlying score matrices are blended at 50/50, ensuring that goal-by-goal simulation samples scorelines consistent with the blended model — not just the DC or Elo component alone. Equal weighting balances recent match performance (DC) against long-run team quality (Elo/FIFA ranking), and was chosen after a 100K-simulation comparison against market outright odds across all 48 teams.</p>
 
       <h3>Tournament Structure</h3>
 
@@ -275,7 +275,7 @@
           <tr><td>Monte Carlo iterations</td><td>100,000</td><td>Per hourly run</td></tr>
           <tr><td>Random seed</td><td>42</td><td>Reproducible within a run</td></tr>
           <tr><td>Score model</td><td>Dixon-Coles bivariate Poisson + xG</td><td>ρ low-score correction; xG used where available</td></tr>
-          <tr><td>Ensemble weights</td><td>70% Dixon-Coles / 30% Elo</td><td>Both score matrices blended at 70/30</td></tr>
+          <tr><td>Ensemble weights</td><td>50% Dixon-Coles / 50% Elo</td><td>Both score matrices blended at 50/50</td></tr>
           <tr><td>Training data time decay</td><td>ξ = 0.0018 / day</td><td>Half-life ≈ 385 days; WC 2022 ≈ 10% weight</td></tr>
           <tr><td>Match venue</td><td>Neutral</td><td>No home-field adjustment</td></tr>
           <tr><td>L2 regularisation</td><td>ridge = 1.0</td><td>Prevents degenerate attack/defence for data-sparse teams</td></tr>
@@ -296,7 +296,7 @@
     Tournament probabilities computed via 100,000 Monte Carlo simulations using a
     Dixon-Coles bivariate Poisson model (with xG integration from StatsBomb Open Data,
     trained on ~2,100 international matches since 2022 with time-decay weighting),
-    blended 70/30 with a FIFA-ranking Elo model. Group tiebreakers follow the official
+    blended 50/50 with a FIFA-ranking Elo model. Group tiebreakers follow the official
     WC 2026 rules (overall pts → H2H pts → H2H GD → H2H GF → overall GD → overall GF).
     Best-8 third-place qualification uses overall record (no H2H); slot assignments
     follow FIFA Annex C. Live results from football-data.org.
