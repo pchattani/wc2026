@@ -1363,6 +1363,28 @@
         "Switzerland": 0.0197,
         "Canada": 0.0084
       }
+    },
+    {
+      "ts": "2026-06-28T01:37:15Z",
+      "label": "Live",
+      "probs": {
+        "Argentina": 0.1761,
+        "France": 0.1518,
+        "Spain": 0.1212,
+        "Brazil": 0.0848,
+        "England": 0.069,
+        "Colombia": 0.052,
+        "Mexico": 0.0479,
+        "Netherlands": 0.0438,
+        "Portugal": 0.0425,
+        "Germany": 0.0362,
+        "Belgium": 0.0297,
+        "Morocco": 0.0263,
+        "Japan": 0.024,
+        "USA": 0.0215,
+        "Switzerland": 0.0204,
+        "Croatia": 0.0086
+      }
     }
   ]
 }
