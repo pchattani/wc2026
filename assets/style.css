@@ -505,3 +505,9 @@ a:hover { color: #79b8ff; }
 .bc-srcnum.bc-src-model  { background: var(--blue); }
 .bc-srcnum.bc-src-kalshi { background: var(--green); }
 .bc-srcnum.bc-src-poly   { background: var(--purple); }
+
+/* ── Decided knockout match: winner highlighted, loser greyed ─────────────── */
+.bc-ko-won .bc-name  { color: var(--green); font-weight: 700; }
+.bc-ko-lost { opacity: 0.4; }
+.bc-ko-lost .bc-name { text-decoration: line-through; text-decoration-color: var(--text3); }
+.bc-ko-tick { color: var(--green); font-size: 0.72rem; font-weight: 800; margin-left: 5px; }

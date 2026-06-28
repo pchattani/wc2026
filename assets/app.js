@@ -458,6 +458,14 @@ function renderKnockout() {
     // R32 winners advance to the Round of 16.
     let dispA = null, dispB = null;
     const aConf = isConfirmedSlot(slotA), bConf = isConfirmedSlot(slotB);
+    const winner = koWinners[gm.match_id];
+    // Decided match → result-only (winner highlighted, no probabilities).
+    if (winner && aConf && bConf) {
+      const tA = slotA.find(t => t.p >= 0.03).team;
+      const tB = slotB.find(t => t.p >= 0.03).team;
+      const lbl = `${gm.match_id} &middot; <span class="bc-slot-lbl">${gm.slot_a} vs ${gm.slot_b}</span>`;
+      return resultCard(gm.idx, tA, tB, winner, null, lbl);
+    }
     if (aConf && bConf) {
       const tA = slotA.find(t => t.p >= 0.03).team;
       const tB = slotB.find(t => t.p >= 0.03).team;
@@ -490,6 +498,66 @@ function renderKnockout() {
     </div>`;
   }
 
+  // A later-round card (R16→Final). Once both teams are resolved from played
+  // results it renders them with reach-next-round odds (Model · Kalshi, pairwise
+  // de-vigged); with one side known it shows that team + TBD; otherwise it falls
+  // back to the "Winner of M__" placeholder.
+  const koResolved = (DATA.bracket && DATA.bracket.ko_resolved) || {};
+  const koWinners  = (DATA.bracket && DATA.bracket.ko_winners) || {};
+  function koTeamLineHtml(team, disp) {
+    return `<div class="bc-slot-row"><span class="bc-inline-team">${flagImg(team)}<span class="bc-name bc-conf-name">${team}</span>${reachNums(disp)}</span></div>`;
+  }
+
+  // A decided match: winner highlighted, loser greyed, no probabilities.
+  // (Forward-looking odds for the winner appear on their next-round card.)
+  function resultLineHtml(team, isWinner) {
+    const cls = isWinner ? 'bc-ko-won' : 'bc-ko-lost';
+    const tick = isWinner ? '<span class="bc-ko-tick">✓</span>' : '';
+    return `<div class="bc-slot-row ${cls}"><span class="bc-inline-team">${flagImg(team)}<span class="bc-name bc-conf-name">${team}</span>${tick}</span></div>`;
+  }
+  function resultCard(mid, teamA, teamB, winner, cls, label) {
+    const clsAttr = cls ? ' ' + cls : '';
+    const lbl = label || `M${mid}`;
+    return `<div class="bc-game${clsAttr}">
+      <div class="bc-label">${lbl}</div>
+      ${resultLineHtml(teamA, teamA === winner)}
+      <div class="bc-slot-div"></div>
+      ${resultLineHtml(teamB, teamB === winner)}
+    </div>`;
+  }
+  function koCard(mid, fallbackA, fallbackB, nextRound, cls, label) {
+    const clsAttr = cls ? ' ' + cls : '';
+    const lbl = label || `M${mid}`;
+    const pair = koResolved[`M${mid}`] || [null, null];
+    const tA = pair[0], tB = pair[1];
+    const winner = koWinners[`M${mid}`];
+    // Decided match → result-only (winner highlighted, no probabilities).
+    if (winner && tA && tB) {
+      return resultCard(mid, tA, tB, winner, cls, label);
+    }
+    if (tA && tB) {
+      const pd = pairDisplay(tA, tB, nextRound);
+      return `<div class="bc-game${clsAttr}">
+        <div class="bc-label">${lbl}</div>
+        ${koTeamLineHtml(tA, pd.a)}
+        <div class="bc-slot-div"></div>
+        ${koTeamLineHtml(tB, pd.b)}
+      </div>`;
+    }
+    if (tA || tB) {
+      const known = tA || tB;
+      const knownLine = koTeamLineHtml(known, rawDisplay(known, nextRound));
+      const tbdLine = `<div class="bc-tbd-row">${tA ? fallbackB : fallbackA}</div>`;
+      return `<div class="bc-game${clsAttr}">
+        <div class="bc-label">${lbl}</div>
+        ${tA ? knownLine : tbdLine}
+        <div class="bc-slot-div"></div>
+        ${tA ? tbdLine : knownLine}
+      </div>`;
+    }
+    return tbdCard(lbl, fallbackA, fallbackB, cls);
+  }
+
   function connectors(n) {
     const el = document.createElement('div');
     el.className = 'bc-connectors';
@@ -517,28 +585,32 @@ function renderKnockout() {
   const r32Html = R32_GROUPS.map(([a,b]) => pr(r32Card(r32[a]), r32Card(r32[b]))).join('');
 
   // ── R16 ────────────────────────────────────────────────────────────────────
+  // R16 winners advance to the Quarter-Final → show reach-QF odds.
   const r16Html = R16_GROUPS.map(([m1,m2], i) => {
     const [a1,b1] = R32_GROUPS[i*2], [a2,b2] = R32_GROUPS[i*2+1];
     return pr(
-      tbdCard(`M${m1}`, `W ${r32[a1].match_id}`, `W ${r32[b1].match_id}`),
-      tbdCard(`M${m2}`, `W ${r32[a2].match_id}`, `W ${r32[b2].match_id}`)
+      koCard(m1, `W ${r32[a1].match_id}`, `W ${r32[b1].match_id}`, 'qf'),
+      koCard(m2, `W ${r32[a2].match_id}`, `W ${r32[b2].match_id}`, 'qf')
     );
   }).join('');
 
   // ── QF ─────────────────────────────────────────────────────────────────────
+  // QF winners advance to the Semi-Final → show reach-SF odds.
   const qfHtml = QF_GROUPS.map(([q1,q2], i) => pr(
-    tbdCard(`M${q1}`, `W M${R16_GROUPS[i*2][0]}`, `W M${R16_GROUPS[i*2][1]}`, 'bc-game-qf'),
-    tbdCard(`M${q2}`, `W M${R16_GROUPS[i*2+1][0]}`, `W M${R16_GROUPS[i*2+1][1]}`, 'bc-game-qf')
+    koCard(q1, `W M${R16_GROUPS[i*2][0]}`, `W M${R16_GROUPS[i*2][1]}`, 'sf', 'bc-game-qf'),
+    koCard(q2, `W M${R16_GROUPS[i*2+1][0]}`, `W M${R16_GROUPS[i*2+1][1]}`, 'sf', 'bc-game-qf')
   )).join('');
 
   // ── SF ─────────────────────────────────────────────────────────────────────
+  // SF winners advance to the Final → show reach-final odds.
   const sfHtml = pr(
-    tbdCard('M101', `W M${QF_GROUPS[0][0]}`, `W M${QF_GROUPS[0][1]}`, 'bc-game-sf'),
-    tbdCard('M102', `W M${QF_GROUPS[1][0]}`, `W M${QF_GROUPS[1][1]}`, 'bc-game-sf')
+    koCard(101, `W M${QF_GROUPS[0][0]}`, `W M${QF_GROUPS[0][1]}`, 'final', 'bc-game-sf'),
+    koCard(102, `W M${QF_GROUPS[1][0]}`, `W M${QF_GROUPS[1][1]}`, 'final', 'bc-game-sf')
   );
 
   // ── Final ──────────────────────────────────────────────────────────────────
-  const finHtml = tbdCard('M103 &middot; 19 Jul &middot; MetLife', 'W M101', 'W M102', 'bc-game-final');
+  // Final → show win-tournament odds.
+  const finHtml = koCard(103, 'W M101', 'W M102', 'win', 'bc-game-final', 'M103 &middot; 19 Jul &middot; MetLife');
 
   // ── Assemble ───────────────────────────────────────────────────────────────
   [
@@ -1027,9 +1099,9 @@ async function init() {
     });
 
     // Deep-link support: open the tab named in the URL hash (e.g. #probs, #knockout).
-    const validTabs = ['groups', 'knockout', 'team', 'third', 'probs', 'methodology'];
+    const validTabs = ['knockout', 'team', 'probs', 'groups', 'third', 'methodology'];
     const hashTab = (location.hash || '').replace('#', '');
-    activateTab(validTabs.includes(hashTab) ? hashTab : 'groups');
+    activateTab(validTabs.includes(hashTab) ? hashTab : 'knockout');
   } catch (err) {
     console.error(err);
     document.getElementById('loading-overlay').innerHTML =
