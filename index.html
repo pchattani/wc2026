@@ -49,22 +49,55 @@
 <!-- ══════════════════════════════════════════════════════════════════════════ -->
 <div id="tab-probs" class="tab-pane">
   <div class="container-xl">
+
+    <!-- Source legend -->
+    <div class="src-legend">
+      <span class="src-key"><span class="src-dot src-model"></span>Our Model</span>
+      <span class="src-key"><span class="src-dot src-poly"></span>Polymarket</span>
+      <span class="src-key"><span class="src-dot src-kalshi"></span>Kalshi</span>
+      <span class="src-key src-edge-key"><span style="color:var(--green)">▲</span> model sees value &nbsp;
+        <span style="color:var(--red)">▼</span> market higher</span>
+      <span class="src-stale" id="market-stale-probs"></span>
+    </div>
+
     <div class="row g-3">
 
-      <!-- Chart -->
+      <!-- Three-way comparison table (hero) -->
       <div class="col-12">
         <div class="card">
-          <div class="card-header">Tournament Win Probability — All 48 Teams</div>
-          <div class="card-body" style="padding:8px">
-            <div id="chart-probs" style="height:700px"></div>
+          <div class="card-header">Tournament Winner — Model vs Market <span class="card-sub">de-vigged · Edge = Model − market consensus</span></div>
+          <div class="card-body" style="padding:0">
+            <table class="wc-table cmp-table">
+              <thead>
+                <tr>
+                  <th>Team</th>
+                  <th class="td-num">Model</th>
+                  <th class="td-num">Polymarket</th>
+                  <th class="td-num">Kalshi</th>
+                  <th class="td-num">Consensus</th>
+                  <th class="td-num">Edge</th>
+                </tr>
+              </thead>
+              <tbody id="cmp-table-body"></tbody>
+            </table>
           </div>
         </div>
       </div>
 
-      <!-- Stage-by-stage table (top 16) -->
+      <!-- Lollipop chart -->
       <div class="col-12">
         <div class="card">
-          <div class="card-header">Stage-by-Stage Probabilities — Top 16 Teams</div>
+          <div class="card-header">Model vs Market — Win Probability</div>
+          <div class="card-body" style="padding:8px">
+            <div id="chart-probs" style="height:640px"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stage-by-stage table (all teams) -->
+      <div class="col-12">
+        <div class="card">
+          <div class="card-header">Model Stage-by-Stage Probabilities — All Teams</div>
           <div class="card-body" style="padding:0">
             <table class="wc-table">
               <thead>
@@ -153,10 +186,16 @@
 <!-- ══════════════════════════════════════════════════════════════════════════ -->
 <div id="tab-knockout" class="tab-pane">
   <div class="container-xl">
-    <div class="d-flex align-items-center gap-4 mb-3" style="flex-wrap:wrap;font-size:0.79rem;color:var(--text2)">
+    <div class="d-flex align-items-center gap-4 mb-2" style="flex-wrap:wrap;font-size:0.79rem;color:var(--text2)">
       <span><strong style="color:var(--blue)">Blue</strong> = confirmed qualifier</span>
       <span><strong style="color:var(--text3)">Grey %</strong> = probability of occupying this slot</span>
-      <span style="color:var(--text3)">Win probabilities shown once all 32 slots are confirmed</span>
+    </div>
+    <div class="d-flex align-items-center gap-3 mb-3" style="flex-wrap:wrap;font-size:0.75rem;color:var(--text3)">
+      <span>Once slots are confirmed, each team shows <strong>probability of reaching the next round</strong>:</span>
+      <span class="bc-srctag"><span class="bc-srcnum bc-src-model">M</span> Model</span>
+      <span class="bc-srctag"><span class="bc-srcnum bc-src-kalshi">K</span> Kalshi</span>
+      <span style="opacity:0.8">— each pair de-vigged to sum to 100%</span>
+      <span class="src-stale" id="market-stale-bracket"></span>
     </div>
     <div class="bracket-tree-wrap" id="bracket-tree"></div>
   </div>
@@ -207,6 +246,29 @@
 
       <h4>50/50 Ensemble Blend</h4>
       <p>Match outcome distributions are drawn from an equal-weight <strong>50% Dixon-Coles / 50% Elo ensemble</strong>. Both the win/draw/loss probabilities <em>and</em> the underlying score matrices are blended at 50/50, ensuring that goal-by-goal simulation samples scorelines consistent with the blended model — not just the DC or Elo component alone. Equal weighting balances recent match performance (DC) against long-run team quality (Elo/FIFA ranking), and was chosen after a 100K-simulation comparison against market outright odds across all 48 teams.</p>
+
+      <h3>Market Comparison (Polymarket &amp; Kalshi)</h3>
+      <p>The <strong>Win Odds</strong> and <strong>Knockout</strong> tabs place our model's estimate side by side with live prices from two prediction markets — <a href="https://polymarket.com" target="_blank">Polymarket</a> (a crypto-settled prediction market) and <a href="https://kalshi.com" target="_blank">Kalshi</a> (a US-regulated, CFTC-supervised exchange). These are real-money markets, so their prices are a strong external benchmark: they aggregate the views of many participants who are financially exposed to being wrong.</p>
+
+      <h4>Which markets are used</h4>
+      <ul>
+        <li><strong>Outright winner</strong> (Win Odds tab) — Polymarket's "World Cup Winner" event and Kalshi's <code>KXMENWORLDCUP</code> series, one contract per team.</li>
+        <li><strong>Reach-round</strong> (Knockout tab) — Kalshi's <code>KXWCROUND</code> series, which prices each team's probability of reaching the Round of 16, Quarter-Final, Semi-Final, and Final. Polymarket is not shown on the bracket because it lists only a reach-final market, not the earlier rounds.</li>
+      </ul>
+      <p>Market prices are refreshed on every hourly run. If a market is briefly unreachable, the dashboard retains the last known prices and flags them as stale rather than blanking the comparison.</p>
+
+      <h4>De-vigging (removing the bookmaker margin)</h4>
+      <p>Raw market prices include a margin (the "vig" or over-round) that makes the implied probabilities sum to more than 100%. To compare fairly against our model — whose probabilities sum to exactly 100% by construction — we remove this margin before display:</p>
+      <ul>
+        <li><strong>Outright winner</strong> is a mutually-exclusive market (exactly one team wins), so each platform's team prices are normalised to sum to 100% across all teams.</li>
+        <li><strong>Reach-round</strong> contracts are independent binary markets, so on the bracket each knockout match is de-vigged <em>pairwise</em>: the two opponents' reach probabilities are normalised to sum to 100%, since exactly one of them advances. This mirrors how a two-way moneyline is de-vigged.</li>
+      </ul>
+
+      <h4>Edge</h4>
+      <p>On the Win Odds tab, <strong>Edge = Model − market consensus</strong> (the consensus being the mean of the available de-vigged market prices), shown in percentage points. A positive Edge (green ▲) means our model assigns a team a higher chance than the market — a potential value opportunity; a negative Edge (red ▼) means the market rates the team higher than we do. Edge is a measure of disagreement, not a guarantee: persistent gaps may reflect a genuine model insight <em>or</em> a model blind spot (for example, limited cross-confederation data — see Limitations).</p>
+
+      <h4>Apples-to-apples</h4>
+      <p>All three sources measure the same event at each stage: the probability of <em>advancing to the next round</em>, i.e. winning that match in full time, extra time, or a penalty shootout. The simulation resolves a knockout draw as a 50/50 shootout (consistent with the historical ~50% outcome of World Cup penalty shootouts), so the model's reach-round probability is directly comparable to the market's reach-round contract.</p>
 
       <h3>Tournament Structure</h3>
 
@@ -263,6 +325,8 @@
           <tr><td><a href="https://www.football-data.org" target="_blank">football-data.org</a></td><td>Live WC 2026 group-stage match results and standings</td><td>Each hourly run</td></tr>
           <tr><td><a href="https://github.com/martj42/international_results" target="_blank">martj42/international_results</a></td><td>~2,100 historical international matches from 2022–2026 (training data)</td><td>Fixed at build</td></tr>
           <tr><td><a href="https://github.com/statsbomb/open-data" target="_blank">StatsBomb Open Data</a></td><td>xG data: WC 2022, EURO 2024, Copa Am 2024, AFCON 2023, EURO 2020, WC 2018 (314 matches)</td><td>Fixed at build</td></tr>
+          <tr><td><a href="https://polymarket.com" target="_blank">Polymarket</a></td><td>Outright winner market prices (de-vigged) for the Win Odds comparison</td><td>Each hourly run</td></tr>
+          <tr><td><a href="https://kalshi.com" target="_blank">Kalshi</a></td><td>Outright winner + reach-round (R16/QF/SF/Final) market prices (de-vigged)</td><td>Each hourly run</td></tr>
           <tr><td>FIFA Official Rankings (June 2026)</td><td>Pre-tournament team ratings for Elo seeding</td><td>Fixed at tournament start</td></tr>
           <tr><td>FIFA WC 2026 Official Bracket + Annex C</td><td>R32/R16/QF/SF slot assignments; third-place slot lookup (495 rows)</td><td>Fixed</td></tr>
         </tbody>

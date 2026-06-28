@@ -462,3 +462,46 @@ a:hover { color: #79b8ff; }
   font-size: 0.73rem; color: var(--text3); font-style: italic;
 }
 .bc-tbd-row:last-child { border-bottom: none; }
+
+/* ── Market comparison (Win Odds) ─────────────────────────────────────────── */
+.src-legend {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 18px;
+  margin: 2px 0 14px; font-size: 0.78rem; color: var(--text2);
+}
+.src-key { display: inline-flex; align-items: center; gap: 6px; }
+.src-dot { width: 11px; height: 11px; border-radius: 50%; display: inline-block; }
+.src-dot.src-model  { background: var(--blue); }
+.src-dot.src-poly   { background: var(--purple); border-radius: 2px; transform: rotate(45deg); }
+.src-dot.src-kalshi { background: var(--green); border-radius: 2px; }
+.src-edge-key { color: var(--text3); }
+.src-stale { color: var(--orange); font-size: 0.74rem; }
+
+.card-sub {
+  font-size: 0.64rem; font-weight: 500; color: var(--text3);
+  text-transform: none; letter-spacing: 0; margin-left: 8px;
+}
+
+.cmp-table td.cmp-model { position: relative; }
+.cmp-table .cmp-bar {
+  position: absolute; left: 0; top: 4px; bottom: 4px;
+  background: rgba(88,166,255,0.16); border-radius: 2px; z-index: 0;
+}
+.cmp-table .cmp-model-v { position: relative; z-index: 1; font-weight: 700; color: var(--blue); }
+.cmp-table td { padding: 7px 10px; }
+
+/* ── Bracket reach-round overlay (Model · Kalshi · Poly) ───────────────────── */
+.bc-reach { display: inline-flex; align-items: baseline; gap: 1px; margin-left: 5px; white-space: nowrap; }
+.bc-rnum { font-size: 0.68rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.bc-rdot { font-size: 0.6rem; color: var(--text3); margin: 0 1px; }
+.bc-src-model  { color: var(--blue); }
+.bc-src-kalshi { color: var(--green); }
+.bc-src-poly   { color: var(--purple); }
+
+.bc-srctag { display: inline-flex; align-items: center; gap: 4px; }
+.bc-srcnum {
+  display: inline-block; width: 16px; height: 16px; line-height: 16px; text-align: center;
+  border-radius: 3px; font-size: 0.64rem; font-weight: 800; color: #0d1117;
+}
+.bc-srcnum.bc-src-model  { background: var(--blue); }
+.bc-srcnum.bc-src-kalshi { background: var(--green); }
+.bc-srcnum.bc-src-poly   { background: var(--purple); }

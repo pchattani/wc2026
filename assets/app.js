@@ -31,6 +31,9 @@ function activateTab(tabName) {
   if (pane) pane.classList.add('active');
   const link = document.querySelector(`[data-tab="${tabName}"]`);
   if (link) link.classList.add('active');
+  if (location.hash.replace('#', '') !== tabName) {
+    history.replaceState(null, '', '#' + tabName);
+  }
   renderTab(tabName);
 }
 
@@ -80,54 +83,120 @@ function makeSortable(table) {
   });
 }
 
+// ── Market-odds helpers ──────────────────────────────────────────────────────
+const SRC_COLORS = { model: '#58a6ff', poly: '#bc8cff', kalshi: '#3fb950' };
+
+function marketFor(team) {
+  const w = (DATA.market && DATA.market.winner) || {};
+  return w[team] || null;
+}
+// consensus = mean of available market sources (null if none)
+function consensusOf(m) {
+  if (!m) return null;
+  const vals = [m.poly, m.kalshi].filter(v => v != null);
+  if (!vals.length) return null;
+  return vals.reduce((a, b) => a + b, 0) / vals.length;
+}
+function fmtPct1(v) { return v == null ? '—' : (v * 100).toFixed(1) + '%'; }
+
+function edgeCell(model, cons) {
+  if (cons == null) return '<span style="color:var(--text3)">—</span>';
+  const d = (model - cons) * 100;
+  const a = Math.abs(d);
+  let color = 'var(--text3)', arrow = '=';
+  if (a >= 0.5) { color = d > 0 ? 'var(--green)' : 'var(--red)'; arrow = d > 0 ? '▲' : '▼'; }
+  return `<span style="color:${color};font-weight:600">${arrow} ${d >= 0 ? '+' : ''}${d.toFixed(1)}</span>`;
+}
+
+function updateMarketStale(market) {
+  const stale = market && market.ok === false;
+  const txt = stale ? '⚠ market odds temporarily unavailable (showing last known)' : '';
+  ['market-stale-probs', 'market-stale-bracket'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = txt;
+  });
+}
+
 // ── TAB 1: WIN PROBS ─────────────────────────────────────────────────────────
 function renderProbs() {
   const { probs } = DATA;
   const teams = probs.teams;
 
-  // Vertical bar chart — top 20 teams
-  const top20 = teams.slice(0, 20);
-  const trace = {
-    type: 'bar',
-    x: top20.map(t => t.team),
-    y: top20.map(t => +(t.p_win * 100).toFixed(2)),
-    text: top20.map(t => (t.p_win * 100).toFixed(1) + '%'),
-    textposition: 'outside',
-    cliponaxis: false,
-    marker: {
-      color: top20.map(t => CONF_COLORS[t.confederation] || '#6e7681'),
-      line: { width: 0 },
-    },
-    hovertemplate: '<b>%{x}</b><br>Win: %{y:.1f}%<extra></extra>',
+  // ── Three-way comparison table (winner) ────────────────────────────────────
+  const live = teams.filter(t => !t.eliminated);
+  const cmpBody = document.getElementById('cmp-table-body');
+  cmpBody.innerHTML = '';
+  const maxModel = Math.max(...live.map(t => t.p_win), 0.0001);
+  live.forEach(t => {
+    const m = marketFor(t.team);
+    const cons = consensusOf(m);
+    const barW = (t.p_win / maxModel) * 100;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><span style="color:${CONF_COLORS[t.confederation]};margin-right:6px">■</span>
+          <strong>${t.team}</strong>
+          <span style="font-size:0.7rem;color:var(--text3);margin-left:4px">#${t.fifa_rank}</span></td>
+      <td class="td-num cmp-model">
+        <div class="cmp-bar" style="width:${barW}%"></div>
+        <span class="cmp-model-v">${fmtPct1(t.p_win)}</span>
+      </td>
+      <td class="td-num" style="color:${SRC_COLORS.poly}">${m ? fmtPct1(m.poly) : '—'}</td>
+      <td class="td-num" style="color:${SRC_COLORS.kalshi}">${m ? fmtPct1(m.kalshi) : '—'}</td>
+      <td class="td-num" style="color:var(--text2)">${fmtPct1(cons)}</td>
+      <td class="td-num">${edgeCell(t.p_win, cons)}</td>
+    `;
+    cmpBody.appendChild(tr);
+  });
+  const cmpTbl = cmpBody.closest('table');
+  if (cmpTbl) makeSortable(cmpTbl);
+
+  // ── Lollipop chart: Model vs market consensus, top 18 by model ─────────────
+  const top = live.slice(0, 18).reverse();   // reverse so highest is at top
+  const names = top.map(t => t.team);
+  const modelX  = top.map(t => +(t.p_win * 100).toFixed(2));
+  const polyX   = top.map(t => { const m = marketFor(t.team); return m && m.poly != null ? +(m.poly * 100).toFixed(2) : null; });
+  const kalshiX = top.map(t => { const m = marketFor(t.team); return m && m.kalshi != null ? +(m.kalshi * 100).toFixed(2) : null; });
+  const consX   = top.map(t => { const c = consensusOf(marketFor(t.team)); return c != null ? +(c * 100).toFixed(2) : null; });
+
+  // Connector lines (model ↔ consensus) as shapes
+  const shapes = names.map((nm, i) => {
+    if (consX[i] == null) return null;
+    return {
+      type: 'line', x0: modelX[i], x1: consX[i], y0: nm, y1: nm,
+      line: { color: '#30363d', width: 2 }, layer: 'below',
+    };
+  }).filter(Boolean);
+
+  const tModel = {
+    type: 'scatter', mode: 'markers', name: 'Model',
+    y: names, x: modelX,
+    marker: { color: SRC_COLORS.model, size: 13, line: { color: '#0d1117', width: 1 } },
+    hovertemplate: '<b>%{y}</b><br>Model: %{x:.1f}%<extra></extra>',
+  };
+  const tPoly = {
+    type: 'scatter', mode: 'markers', name: 'Polymarket',
+    y: names, x: polyX,
+    marker: { color: SRC_COLORS.poly, size: 10, symbol: 'diamond', line: { color: '#0d1117', width: 1 } },
+    hovertemplate: '<b>%{y}</b><br>Polymarket: %{x:.1f}%<extra></extra>',
+  };
+  const tKalshi = {
+    type: 'scatter', mode: 'markers', name: 'Kalshi',
+    y: names, x: kalshiX,
+    marker: { color: SRC_COLORS.kalshi, size: 10, symbol: 'square', line: { color: '#0d1117', width: 1 } },
+    hovertemplate: '<b>%{y}</b><br>Kalshi: %{x:.1f}%<extra></extra>',
   };
 
   const layout = {
     ...DARK_LAYOUT,
-    margin: { t: 30, r: 20, b: 90, l: 50 },
-    xaxis: {
-      ...DARK_LAYOUT.xaxis,
-      tickangle: -40,
-      tickfont: { size: 11 },
-      automargin: true,
-    },
-    yaxis: {
-      ...DARK_LAYOUT.yaxis,
-      ticksuffix: '%',
-      title: { text: 'Win Probability', font: { size: 11 } },
-    },
-    height: 380,
-    bargap: 0.3,
+    margin: { t: 10, r: 20, b: 44, l: 110 },
+    height: 620,
+    shapes,
+    xaxis: { ...DARK_LAYOUT.xaxis, ticksuffix: '%', title: { text: 'Win Probability', font: { size: 11 } }, rangemode: 'tozero' },
+    yaxis: { ...DARK_LAYOUT.yaxis, automargin: true, tickfont: { size: 11.5 } },
+    legend: { ...DARK_LAYOUT.legend, orientation: 'h', x: 0.5, xanchor: 'center', y: 1.06 },
+    hovermode: 'closest',
   };
-
-  // Confederation legend as annotations
-  const confSeen = [...new Set(top20.map(t => t.confederation))];
-  layout.annotations = confSeen.map((c, i) => ({
-    x: 1, xref: 'paper', y: 1 - i * 0.07, yref: 'paper',
-    text: `<span style="color:${CONF_COLORS[c]}">■</span> ${c}`,
-    showarrow: false, font: { size: 10, color: '#8b949e' }, xanchor: 'left',
-  }));
-
-  Plotly.newPlot('chart-probs', [trace], layout, PLOTLY_CONF);
+  Plotly.newPlot('chart-probs', [tModel, tPoly, tKalshi], layout, PLOTLY_CONF);
 
   // Stage probability table — all 48 teams, sortable
   const tbody = document.getElementById('probs-table-body');
@@ -310,34 +379,107 @@ function renderKnockout() {
     isConfirmedSlot(gm.slot_a_teams || []) && isConfirmedSlot(gm.slot_b_teams || [])
   );
 
-  // showWin: true only when all R32 slots are confirmed (tournament bracket is fully set).
-  // Confirmed slot + showWin → win %. Confirmed slot + no showWin → just name. Unconfirmed → slot %.
-  function slotRow(teams) {
+  // ── reach-round lookups (model + market) ───────────────────────────────────
+  // Model reach probs from probs.json; market reach from market_odds.json.
+  const modelReach = {};   // team -> {r16,qf,sf,final,win}
+  (DATA.probs.teams || []).forEach(t => {
+    modelReach[t.team] = { r16: t.p_r16, qf: t.p_qf, sf: t.p_sf, final: t.p_final, win: t.p_win };
+  });
+  const mktReach = (DATA.market && DATA.market.reach) || {};
+  const mktWinner = (DATA.market && DATA.market.winner) || {};
+
+  // Raw Kalshi reach prob for a team at a given round (null if unavailable).
+  function kalshiReach(team, roundKey) {
+    if (roundKey === 'win') {
+      const w = mktWinner[team];
+      return w && w.kalshi != null ? w.kalshi : null;
+    }
+    const r = mktReach[roundKey] && mktReach[roundKey][team];
+    return r && r.kalshi != null ? r.kalshi : null;
+  }
+
+  // Render Model + Kalshi reach numbers for one team from pre-computed display
+  // integers (already pairwise-rounded to sum to 100). Polymarket is excluded.
+  function reachNums(disp) {
+    if (!disp) return '';
+    const parts = [];
+    if (disp.model != null) parts.push(`<span class="bc-rnum bc-src-model">${disp.model}</span>`);
+    if (disp.kal   != null) parts.push(`<span class="bc-rnum bc-src-kalshi">${disp.kal}</span>`);
+    if (!parts.length) return '';
+    return `<span class="bc-reach">${parts.join('<span class="bc-rdot">·</span>')}</span>`;
+  }
+
+  // Confirmed slot → show reach-next-round (Model · Kalshi). Unconfirmed → slot %.
+  // `disp` carries the pre-rounded {model, kal} integers for the confirmed team.
+  function slotRow(teams, disp) {
     const visible = teams.filter(t => t.p >= 0.03);
     if (!visible.length) return '<div class="bc-slot-row"><span class="bc-tbd-inline">TBD</span></div>';
     const confirmed = isConfirmedSlot(teams);
     const parts = visible.map(t => {
-      let pct = '';
-      if (allR32Confirmed && confirmed && t.p_win != null) {
-        const fav = t.p_win >= 0.5;
-        pct = `<span class="bc-inline-pct ${fav ? 'bc-ipct-fav' : 'bc-ipct-dog'}">(${(t.p_win * 100).toFixed(0)}%)</span>`;
+      let extra = '';
+      if (confirmed && disp) {
+        extra = reachNums(disp);
       } else if (!confirmed) {
-        pct = `<span class="bc-inline-pct bc-ipct-slot">(${(t.p * 100).toFixed(0)}%)</span>`;
+        extra = `<span class="bc-inline-pct bc-ipct-slot">(${(t.p * 100).toFixed(0)}%)</span>`;
       }
       const nc = confirmed ? 'bc-name bc-conf-name' : 'bc-name';
-      return `<span class="bc-inline-team">${flagImg(t.team)}<span class="${nc}">${t.team}</span>${pct}</span>`;
+      return `<span class="bc-inline-team">${flagImg(t.team)}<span class="${nc}">${t.team}</span>${extra}</span>`;
     });
     return `<div class="bc-slot-row">${parts.join('<span class="bc-sep">/</span>')}</div>`;
   }
 
+  // For a confirmed two-team match, compute display integers for both teams so
+  // that each metric (model, Kalshi) sums to exactly 100 across the pair.
+  // Kalshi is pairwise de-vigged (a knockout match has exactly one advancer).
+  // Returns {a:{model,kal}, b:{model,kal}}.
+  function pairDisplay(teamA, teamB, roundKey) {
+    const mA = modelReach[teamA] ? modelReach[teamA][roundKey] : null;
+    const mB = modelReach[teamB] ? modelReach[teamB][roundKey] : null;
+    const kA = kalshiReach(teamA, roundKey);
+    const kB = kalshiReach(teamB, roundKey);
+
+    // Complementary rounding: round team A, set team B = 100 − A, so the pair
+    // always sums to exactly 100.
+    function split(a, b) {
+      if (a == null && b == null) return [null, null];
+      if (a == null) return [null, Math.round(b * 100)];
+      if (b == null) return [Math.round(a * 100), null];
+      const s = a + b;                  // de-vig (model already ~1; Kalshi may not be)
+      const ai = Math.round((a / s) * 100);
+      return [ai, 100 - ai];
+    }
+    const [maI, mbI] = split(mA, mB);
+    const [kaI, kbI] = split(kA, kB);
+    return { a: { model: maI, kal: kaI }, b: { model: mbI, kal: kbI } };
+  }
+
   function r32Card(gm) {
     const slotA = gm.slot_a_teams || [], slotB = gm.slot_b_teams || [];
+    // R32 winners advance to the Round of 16.
+    let dispA = null, dispB = null;
+    const aConf = isConfirmedSlot(slotA), bConf = isConfirmedSlot(slotB);
+    if (aConf && bConf) {
+      const tA = slotA.find(t => t.p >= 0.03).team;
+      const tB = slotB.find(t => t.p >= 0.03).team;
+      const pd = pairDisplay(tA, tB, 'r16');
+      dispA = pd.a; dispB = pd.b;
+    } else {
+      // Only one side confirmed: show its raw (un-normalised) numbers.
+      if (aConf) { const t = slotA.find(x => x.p >= 0.03).team; dispA = rawDisplay(t, 'r16'); }
+      if (bConf) { const t = slotB.find(x => x.p >= 0.03).team; dispB = rawDisplay(t, 'r16'); }
+    }
     return `<div class="bc-game">
       <div class="bc-label">${gm.match_id} &middot; <span class="bc-slot-lbl">${gm.slot_a} vs ${gm.slot_b}</span></div>
-      ${slotRow(slotA)}
+      ${slotRow(slotA, dispA)}
       <div class="bc-slot-div"></div>
-      ${slotRow(slotB)}
+      ${slotRow(slotB, dispB)}
     </div>`;
+  }
+
+  function rawDisplay(team, roundKey) {
+    const m = modelReach[team] ? modelReach[team][roundKey] : null;
+    const k = kalshiReach(team, roundKey);
+    return { model: m != null ? Math.round(m * 100) : null, kal: k != null ? Math.round(k * 100) : null };
   }
 
   function tbdCard(mid, a, b, cls) {
@@ -863,14 +1005,16 @@ function updateMeta(meta) {
 // ── Bootstrap ─────────────────────────────────────────────────────────────────
 async function init() {
   try {
-    const [probs, groups, scenarios, meta, bracket] = await Promise.all([
+    const [probs, groups, scenarios, meta, bracket, market] = await Promise.all([
       fetchJSON('probs.json'),
       fetchJSON('groups.json'),
       fetchJSON('scenarios.json'),
       fetchJSON('meta.json'),
       fetchJSON('bracket.json'),
+      fetchJSON('market_odds.json').catch(() => ({ ok: false, winner: {}, reach: {} })),
     ]);
-    DATA = { probs, groups, scenarios, meta, bracket };
+    DATA = { probs, groups, scenarios, meta, bracket, market };
+    updateMarketStale(market);
 
     updateMeta(meta);
     document.getElementById('loading-overlay').style.display = 'none';
@@ -882,7 +1026,10 @@ async function init() {
       });
     });
 
-    renderTab('groups');
+    // Deep-link support: open the tab named in the URL hash (e.g. #probs, #knockout).
+    const validTabs = ['groups', 'knockout', 'team', 'third', 'probs', 'methodology'];
+    const hashTab = (location.hash || '').replace('#', '');
+    activateTab(validTabs.includes(hashTab) ? hashTab : 'groups');
   } catch (err) {
     console.error(err);
     document.getElementById('loading-overlay').innerHTML =
