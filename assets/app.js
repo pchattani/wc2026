@@ -123,27 +123,36 @@ function renderProbs() {
   const teams = probs.teams;
 
   // ── Three-way comparison table (winner) ────────────────────────────────────
+  // All teams shown; eliminated teams sit at the bottom (p_win = 0), greyed and
+  // tagged so it's unambiguous their win probability is 0.
   const live = teams.filter(t => !t.eliminated);
   const cmpBody = document.getElementById('cmp-table-body');
   cmpBody.innerHTML = '';
   const maxModel = Math.max(...live.map(t => t.p_win), 0.0001);
-  live.forEach(t => {
+  teams.forEach(t => {
     const m = marketFor(t.team);
     const cons = consensusOf(m);
-    const barW = (t.p_win / maxModel) * 100;
+    const elim = t.eliminated;
+    const barW = elim ? 0 : (t.p_win / maxModel) * 100;
     const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td><span style="color:${CONF_COLORS[t.confederation]};margin-right:6px">■</span>
+    if (elim) tr.className = 'cmp-elim';
+    const nameCell = elim
+      ? `<td><span style="color:${CONF_COLORS[t.confederation]};margin-right:6px;opacity:0.5">■</span>
+          <span class="cmp-elim-name">${t.team}</span>
+          <span class="cmp-elim-tag">Eliminated</span></td>`
+      : `<td><span style="color:${CONF_COLORS[t.confederation]};margin-right:6px">■</span>
           <strong>${t.team}</strong>
-          <span style="font-size:0.7rem;color:var(--text3);margin-left:4px">#${t.fifa_rank}</span></td>
+          <span style="font-size:0.7rem;color:var(--text3);margin-left:4px">#${t.fifa_rank}</span></td>`;
+    tr.innerHTML = `
+      ${nameCell}
       <td class="td-num cmp-model">
         <div class="cmp-bar" style="width:${barW}%"></div>
-        <span class="cmp-model-v">${fmtPct1(t.p_win)}</span>
+        <span class="cmp-model-v">${elim ? '0.0%' : fmtPct1(t.p_win)}</span>
       </td>
       <td class="td-num" style="color:${SRC_COLORS.poly}">${m ? fmtPct1(m.poly) : '—'}</td>
       <td class="td-num" style="color:${SRC_COLORS.kalshi}">${m ? fmtPct1(m.kalshi) : '—'}</td>
       <td class="td-num" style="color:var(--text2)">${fmtPct1(cons)}</td>
-      <td class="td-num">${edgeCell(t.p_win, cons)}</td>
+      <td class="td-num">${elim ? '<span style="color:var(--text3)">—</span>' : edgeCell(t.p_win, cons)}</td>
     `;
     cmpBody.appendChild(tr);
   });
@@ -464,7 +473,7 @@ function renderKnockout() {
       const tA = slotA.find(t => t.p >= 0.03).team;
       const tB = slotB.find(t => t.p >= 0.03).team;
       const lbl = `${gm.match_id} &middot; <span class="bc-slot-lbl">${gm.slot_a} vs ${gm.slot_b}</span>`;
-      return resultCard(gm.idx, tA, tB, winner, null, lbl);
+      return resultCard(gm.match_id, tA, tB, winner, null, lbl);
     }
     if (aConf && bConf) {
       const tA = slotA.find(t => t.p >= 0.03).team;
@@ -504,25 +513,31 @@ function renderKnockout() {
   // back to the "Winner of M__" placeholder.
   const koResolved = (DATA.bracket && DATA.bracket.ko_resolved) || {};
   const koWinners  = (DATA.bracket && DATA.bracket.ko_winners) || {};
+  const koScores   = (DATA.bracket && DATA.bracket.ko_scores) || {};
   function koTeamLineHtml(team, disp) {
     return `<div class="bc-slot-row"><span class="bc-inline-team">${flagImg(team)}<span class="bc-name bc-conf-name">${team}</span>${reachNums(disp)}</span></div>`;
   }
 
   // A decided match: winner highlighted, loser greyed, no probabilities.
-  // (Forward-looking odds for the winner appear on their next-round card.)
-  function resultLineHtml(team, isWinner) {
+  // The final scoreline sits in its own right-aligned column so it never reads
+  // as a probability. (Forward-looking odds appear on the winner's next card.)
+  function resultLineHtml(team, isWinner, goals) {
     const cls = isWinner ? 'bc-ko-won' : 'bc-ko-lost';
     const tick = isWinner ? '<span class="bc-ko-tick">✓</span>' : '';
-    return `<div class="bc-slot-row ${cls}"><span class="bc-inline-team">${flagImg(team)}<span class="bc-name bc-conf-name">${team}</span>${tick}</span></div>`;
+    const scoreHtml = goals != null
+      ? `<span class="bc-score${isWinner ? ' bc-score-win' : ''}">${goals}</span>`
+      : '';
+    return `<div class="bc-slot-row ${cls}"><span class="bc-inline-team">${flagImg(team)}<span class="bc-name bc-conf-name">${team}</span>${tick}</span>${scoreHtml}</div>`;
   }
-  function resultCard(mid, teamA, teamB, winner, cls, label) {
+  function resultCard(matchId, teamA, teamB, winner, cls, label) {
     const clsAttr = cls ? ' ' + cls : '';
-    const lbl = label || `M${mid}`;
+    const lbl = label || matchId;
+    const sc = koScores[matchId] || {};
     return `<div class="bc-game${clsAttr}">
       <div class="bc-label">${lbl}</div>
-      ${resultLineHtml(teamA, teamA === winner)}
+      ${resultLineHtml(teamA, teamA === winner, sc[teamA])}
       <div class="bc-slot-div"></div>
-      ${resultLineHtml(teamB, teamB === winner)}
+      ${resultLineHtml(teamB, teamB === winner, sc[teamB])}
     </div>`;
   }
   function koCard(mid, fallbackA, fallbackB, nextRound, cls, label) {
@@ -533,7 +548,7 @@ function renderKnockout() {
     const winner = koWinners[`M${mid}`];
     // Decided match → result-only (winner highlighted, no probabilities).
     if (winner && tA && tB) {
-      return resultCard(mid, tA, tB, winner, cls, label);
+      return resultCard(`M${mid}`, tA, tB, winner, cls, label);
     }
     if (tA && tB) {
       const pd = pairDisplay(tA, tB, nextRound);
@@ -921,6 +936,13 @@ function initTeamView() {
     sel.appendChild(opt);
   });
   sel.addEventListener('change', () => renderTeamView(sel.value));
+
+  // Deep-link: ?team=<name> preselects a team (shareable team links).
+  const wanted = new URLSearchParams(location.search).get('team');
+  if (wanted && probs.teams.some(t => t.team === wanted)) {
+    sel.value = wanted;
+    renderTeamView(wanted);
+  }
 }
 
 function renderTeamView(team) {
@@ -939,9 +961,27 @@ function renderTeamView(team) {
     { key: 'p_win',   label: 'Win' },
   ];
 
+  let html = '';
+
+  // ── Eliminated banner ────────────────────────────────────────────────────
+  if (teamData.eliminated) {
+    html += `<div class="tv-elim-banner">
+      <span style="font-size:1.4rem">❌</span>
+      <div>
+        <div class="tv-elim-title">${team} — Eliminated</div>
+        <div class="tv-elim-sub">No longer in the tournament · win probability 0%</div>
+      </div>
+    </div>`;
+  }
+
   // ── Path-by-position section ─────────────────────────────────────────────
   const teamPaths = bracket && bracket.team_paths && bracket.team_paths[team];
-  let html = '';
+  if (teamData.eliminated) {
+    // Eliminated: skip the forward-looking scenario/stage panels — render the
+    // banner only (their probabilities are all 0 and add no information).
+    document.getElementById('team-view-content').innerHTML = html;
+    return;
+  }
   if (teamPaths && teamPaths.p_finish_pos) {
     const pfp = teamPaths.p_finish_pos;        // {1:p, 2:p, 3:p, 4:p}
     const byPos = teamPaths.r32_by_pos || {};   // {1:[{team,p},...], 2:[...], 3:[...]}

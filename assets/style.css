@@ -34,6 +34,11 @@ body {
 }
 .site-title {
   font-size: 1.35rem; font-weight: 700; color: var(--text); margin: 0 0 3px;
+  display: flex; align-items: center; gap: 9px;
+}
+.wc-trophy {
+  height: 34px; width: auto; flex-shrink: 0;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.5));
 }
 .site-sub {
   font-size: 0.81rem; color: var(--text2); margin: 0 0 2px;
@@ -489,6 +494,26 @@ a:hover { color: #79b8ff; }
 .cmp-table .cmp-model-v { position: relative; z-index: 1; font-weight: 700; color: var(--blue); }
 .cmp-table td { padding: 7px 10px; }
 
+/* Eliminated team rows in the winner comparison table */
+.cmp-table tr.cmp-elim { opacity: 0.6; }
+.cmp-table tr.cmp-elim .cmp-model-v { color: var(--text3); font-weight: 600; }
+.cmp-elim-name { color: var(--text2); text-decoration: line-through; text-decoration-color: var(--text3); }
+.cmp-elim-tag {
+  margin-left: 7px; font-size: 0.6rem; font-weight: 700; letter-spacing: 0.04em;
+  text-transform: uppercase; color: var(--red);
+  border: 1px solid rgba(248,81,73,0.4); border-radius: 9px; padding: 1px 7px;
+}
+
+/* Team View — eliminated banner */
+.tv-elim-banner {
+  display: flex; align-items: center; gap: 10px;
+  background: rgba(248,81,73,0.10); border: 1px solid rgba(248,81,73,0.4);
+  border-left: 4px solid var(--red); border-radius: 6px;
+  padding: 12px 18px; margin-bottom: 4px;
+}
+.tv-elim-banner .tv-elim-title { font-size: 1.0rem; font-weight: 700; color: var(--red); }
+.tv-elim-banner .tv-elim-sub { font-size: 0.82rem; color: var(--text2); }
+
 /* ── Bracket reach-round overlay (Model · Kalshi · Poly) ───────────────────── */
 .bc-reach { display: inline-flex; align-items: baseline; gap: 1px; margin-left: 5px; white-space: nowrap; }
 .bc-rnum { font-size: 0.68rem; font-weight: 700; font-variant-numeric: tabular-nums; }
@@ -511,3 +536,10 @@ a:hover { color: #79b8ff; }
 .bc-ko-lost { opacity: 0.4; }
 .bc-ko-lost .bc-name { text-decoration: line-through; text-decoration-color: var(--text3); }
 .bc-ko-tick { color: var(--green); font-size: 0.72rem; font-weight: 800; margin-left: 5px; }
+/* Final scoreline — own right-aligned column, monospace, distinct from any % */
+.bc-score {
+  margin-left: auto; padding-left: 8px; flex-shrink: 0;
+  font-variant-numeric: tabular-nums; font-weight: 700; font-size: 0.86rem;
+  color: var(--text3); text-align: right;
+}
+.bc-score.bc-score-win { color: var(--text); }
