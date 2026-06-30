@@ -1869,6 +1869,28 @@
         "Croatia": 0.0078,
         "Paraguay": 0.0059
       }
+    },
+    {
+      "ts": "2026-06-30T05:10:17Z",
+      "label": "Live",
+      "probs": {
+        "Argentina": 0.1818,
+        "France": 0.1623,
+        "Brazil": 0.1526,
+        "Spain": 0.1127,
+        "England": 0.0637,
+        "Colombia": 0.0462,
+        "Portugal": 0.0417,
+        "Mexico": 0.0397,
+        "Netherlands": 0.0285,
+        "Morocco": 0.0273,
+        "Belgium": 0.027,
+        "USA": 0.026,
+        "Canada": 0.0232,
+        "Switzerland": 0.0188,
+        "Croatia": 0.0077,
+        "Paraguay": 0.0064
+      }
     }
   ]
 }
