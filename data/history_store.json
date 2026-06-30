@@ -1979,6 +1979,28 @@
         "Australia": 0.0059,
         "Paraguay": 0.0057
       }
+    },
+    {
+      "ts": "2026-06-30T19:31:26Z",
+      "label": "Live",
+      "probs": {
+        "France": 0.1801,
+        "Argentina": 0.1786,
+        "Brazil": 0.1495,
+        "Spain": 0.108,
+        "Morocco": 0.0682,
+        "England": 0.0618,
+        "Colombia": 0.0454,
+        "Portugal": 0.0394,
+        "Mexico": 0.0386,
+        "Belgium": 0.023,
+        "USA": 0.023,
+        "Canada": 0.0203,
+        "Switzerland": 0.0174,
+        "Norway": 0.0091,
+        "Croatia": 0.0072,
+        "Australia": 0.0051
+      }
     }
   ]
 }
