@@ -46,6 +46,7 @@ function renderTab(tabName) {
   if (tabName === 'knockout')     renderKnockout();
   if (tabName === 'third')        renderScenarios();
   if (tabName === 'team')         initTeamView();
+  if (tabName === 'players')      renderPlayers();
   if (tabName === 'methodology')  renderSimsCharts();
 }
 
@@ -111,7 +112,7 @@ function edgeCell(model, cons) {
 function updateMarketStale(market) {
   const stale = market && market.ok === false;
   const txt = stale ? '⚠ market odds temporarily unavailable (showing last known)' : '';
-  ['market-stale-probs', 'market-stale-bracket'].forEach(id => {
+  ['market-stale-probs', 'market-stale-bracket', 'market-stale-players'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.textContent = txt;
   });
@@ -1106,6 +1107,221 @@ function renderTeamView(team) {
   if (oppTable) makeSortable(oppTable);
 }
 
+// ── TAB: PLAYERS ──────────────────────────────────────────────────────────────
+function playerFlag(team) {
+  const code = TEAM_FLAG[team];
+  return code
+    ? `<img class="bc-flag" src="https://flagcdn.com/20x15/${code}.png" alt="" loading="lazy" onerror="this.style.display='none'">`
+    : '<span style="width:20px;height:15px;display:inline-block"></span>';
+}
+
+let playersRendered = false;
+function renderPlayers() {
+  renderBootRace();
+  renderLiveLeaders();
+  if (!playersRendered) { initHistoricalCompare(); playersRendered = true; }
+}
+
+// Section 1: Golden Boot race — Model vs Poly vs Kalshi + Edge, table + lollipop
+function renderBootRace() {
+  const rows = (DATA.playerLeaders && DATA.playerLeaders.golden_boot) || [];
+  const body = document.getElementById('boot-table-body');
+  body.innerHTML = '';
+  const maxModel = Math.max(...rows.map(r => r.model || 0), 0.0001);
+  rows.forEach(r => {
+    const cons = consensusOf({ poly: r.poly, kalshi: r.kalshi });
+    const barW = ((r.model || 0) / maxModel) * 100;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${playerFlag(r.team)}<strong style="margin-left:6px">${r.name}</strong>
+          <span style="font-size:0.7rem;color:var(--text3);margin-left:5px">${r.team}</span></td>
+      <td class="td-num cmp-model"><div class="cmp-bar" style="width:${barW}%"></div>
+          <span class="cmp-model-v">${r.model != null ? fmtPct1(r.model) : '—'}</span></td>
+      <td class="td-num" style="color:${SRC_COLORS.poly}">${r.poly != null ? fmtPct1(r.poly) : '—'}</td>
+      <td class="td-num" style="color:${SRC_COLORS.kalshi}">${r.kalshi != null ? fmtPct1(r.kalshi) : '—'}</td>
+      <td class="td-num" style="color:var(--text2)">${fmtPct1(cons)}</td>
+      <td class="td-num">${r.model != null && cons != null ? edgeCell(r.model, cons) : '<span style="color:var(--text3)">—</span>'}</td>`;
+    body.appendChild(tr);
+  });
+  const tbl = body.closest('table'); if (tbl) makeSortable(tbl);
+
+  // Lollipop: model dot vs market dots, top 14 by consensus/model
+  const top = rows.slice(0, 14).reverse();
+  const names = top.map(r => r.name);
+  const val = (v) => v != null ? +(v * 100).toFixed(2) : null;
+  const consX = top.map(r => { const c = consensusOf({ poly: r.poly, kalshi: r.kalshi }); return c != null ? +(c * 100).toFixed(2) : null; });
+  const modelX = top.map(r => val(r.model));
+  const shapes = names.map((nm, i) => (consX[i] == null || modelX[i] == null) ? null : ({
+    type: 'line', x0: modelX[i], x1: consX[i], y0: nm, y1: nm, line: { color: '#30363d', width: 2 }, layer: 'below',
+  })).filter(Boolean);
+  const trace = (name, xs, color, symbol, size) => ({
+    type: 'scatter', mode: 'markers', name, y: names, x: xs,
+    marker: { color, size, symbol, line: { color: '#0d1117', width: 1 } },
+    hovertemplate: `<b>%{y}</b><br>${name}: %{x:.1f}%<extra></extra>`,
+  });
+  Plotly.newPlot('chart-boot', [
+    trace('Model', modelX, SRC_COLORS.model, 'circle', 13),
+    trace('Polymarket', top.map(r => val(r.poly)), SRC_COLORS.poly, 'diamond', 10),
+    trace('Kalshi', top.map(r => val(r.kalshi)), SRC_COLORS.kalshi, 'square', 10),
+  ], {
+    ...DARK_LAYOUT, height: 500, shapes,
+    margin: { t: 10, r: 16, b: 42, l: 130 },
+    xaxis: { ...DARK_LAYOUT.xaxis, ticksuffix: '%', title: { text: 'Top-scorer probability', font: { size: 11 } }, rangemode: 'tozero' },
+    yaxis: { ...DARK_LAYOUT.yaxis, automargin: true, tickfont: { size: 11 } },
+    legend: { ...DARK_LAYOUT.legend, orientation: 'h', x: 0.5, xanchor: 'center', y: 1.05 },
+    hovermode: 'closest',
+  }, PLOTLY_CONF);
+}
+
+// Section 2: live scoring leaders (this tournament)
+function renderLiveLeaders() {
+  const rows = (DATA.playerLeaders && DATA.playerLeaders.live) || [];
+  const body = document.getElementById('live-leaders-body');
+  body.innerHTML = '';
+  rows.forEach(r => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${playerFlag(r.team)}<strong style="margin-left:6px">${r.name}</strong>
+          <span style="font-size:0.7rem;color:var(--text3);margin-left:5px">${r.team}</span></td>
+      <td class="td-num" style="font-weight:700;color:var(--blue)">${r.goals}</td>
+      <td class="td-num">${r.assists}</td>
+      <td class="td-num" style="color:var(--text3)">${r.penalties}</td>
+      <td class="td-num" style="color:var(--text3)">${r.apps}</td>
+      <td class="td-num" style="font-weight:600">${r.goals + r.assists}</td>`;
+    body.appendChild(tr);
+  });
+  const tbl = body.closest('table'); if (tbl) makeSortable(tbl);
+}
+
+// Section 3: Historical Player Comparison — leaderboard (metric switch) + radar compare
+const HP_METRICS = [
+  { key: 'goals',          label: 'Goals' },
+  { key: 'goals_90',       label: 'Goals / 90' },
+  { key: 'xg',             label: 'xG' },
+  { key: 'xg_90',          label: 'xG / 90' },
+  { key: 'npxg_90',        label: 'Non-pen xG / 90' },
+  { key: 'assists',        label: 'Assists' },
+  { key: 'xa',             label: 'xA' },
+  { key: 'xa_90',          label: 'xA / 90' },
+  { key: 'key_passes',     label: 'Key passes' },
+  { key: 'key_passes_90',  label: 'Key passes / 90' },
+  { key: 'shots',          label: 'Shots' },
+  { key: 'shots_90',       label: 'Shots / 90' },
+  { key: 'prog_passes_90', label: 'Prog. passes / 90' },
+  { key: 'pass_pct',       label: 'Pass %' },
+  { key: 'gk_saves',       label: 'GK saves' },
+];
+// Radar axes (per-90, comparable across roles)
+const RADAR_AXES = [
+  { key: 'goals_90',       label: 'Goals' },
+  { key: 'xg_90',          label: 'xG' },
+  { key: 'assists_90',     label: 'Assists' },
+  { key: 'xa_90',          label: 'xA' },
+  { key: 'key_passes_90',  label: 'Key passes' },
+  { key: 'shots_90',       label: 'Shots' },
+  { key: 'prog_passes_90', label: 'Prog. passes' },
+];
+
+function initHistoricalCompare() {
+  const players = (DATA.playersHist && DATA.playersHist.players) || [];
+
+  // Metric switcher
+  const msel = document.getElementById('hp-metric');
+  msel.innerHTML = HP_METRICS.map(m => `<option value="${m.key}">${m.label}</option>`).join('');
+  msel.addEventListener('change', () => renderHistLeaderboard(msel.value));
+  renderHistLeaderboard('goals');
+
+  // Player pickers (sorted by goals; label with team)
+  const opts = players.map((p, i) => `<option value="${i}">${p.name} (${p.team})</option>`).join('');
+  const a = document.getElementById('hp-a'), b = document.getElementById('hp-b');
+  a.innerHTML = '<option value="">Player A…</option>' + opts;
+  b.innerHTML = '<option value="">Player B…</option>' + opts;
+  // Sensible defaults: top two goalscorers
+  if (players.length >= 2) { a.value = '0'; b.value = '1'; }
+  a.addEventListener('change', renderRadar);
+  b.addEventListener('change', renderRadar);
+  renderRadar();
+}
+
+function renderHistLeaderboard(metricKey) {
+  const players = (DATA.playersHist && DATA.playersHist.players) || [];
+  const meta = HP_METRICS.find(m => m.key === metricKey) || HP_METRICS[0];
+  document.getElementById('hp-metric-col').textContent = meta.label;
+  const per90 = metricKey.endsWith('_90') || metricKey === 'pass_pct';
+  // For per-90 metrics require a minutes floor so tiny samples don't top the board
+  const pool = per90 ? players.filter(p => p.minutes >= 270) : players;
+  const ranked = [...pool].sort((x, y) => (y[metricKey] || 0) - (x[metricKey] || 0)).slice(0, 40);
+  const body = document.getElementById('hp-leader-body');
+  const fmt = v => per90 ? (+v).toFixed(2) : v;
+  body.innerHTML = ranked.map((p, i) => `
+    <tr>
+      <td style="color:var(--text3)">${i + 1}</td>
+      <td>${playerFlag(p.team)}<strong style="margin-left:6px">${p.name}</strong>
+          <span style="font-size:0.68rem;color:var(--text3);margin-left:4px">${p.role}</span></td>
+      <td class="td-num" style="font-weight:700;color:var(--blue)">${fmt(p[metricKey] ?? 0)}</td>
+      <td class="td-num" style="color:var(--text3)">${p.minutes}</td>
+    </tr>`).join('');
+}
+
+function renderRadar() {
+  const players = (DATA.playersHist && DATA.playersHist.players) || [];
+  const ai = document.getElementById('hp-a').value, bi = document.getElementById('hp-b').value;
+  const picks = [ai, bi].filter(v => v !== '').map(v => players[+v]).filter(Boolean);
+
+  // Normalize each axis to the 95th percentile across the pool (so one outlier
+  // doesn't flatten the shape), clamped to 1.
+  const p95 = {};
+  RADAR_AXES.forEach(ax => {
+    const vals = players.map(p => p[ax.key] || 0).filter(v => v > 0).sort((a, b) => a - b);
+    p95[ax.key] = vals.length ? (vals[Math.floor(vals.length * 0.95)] || vals[vals.length - 1]) : 1;
+  });
+  const colors = ['#58a6ff', '#f778ba'];
+  const fills = ['rgba(88,166,255,0.18)', 'rgba(247,120,186,0.18)'];
+  const traces = picks.map((p, i) => ({
+    type: 'scatterpolar', fill: 'toself', name: p.name,
+    r: RADAR_AXES.map(ax => Math.min((p[ax.key] || 0) / (p95[ax.key] || 1), 1)).concat([Math.min((p[RADAR_AXES[0].key] || 0) / (p95[RADAR_AXES[0].key] || 1), 1)]),
+    theta: RADAR_AXES.map(ax => ax.label).concat([RADAR_AXES[0].label]),
+    line: { color: colors[i] }, fillcolor: fills[i],
+    marker: { color: colors[i] },
+    hovertemplate: '<b>' + p.name + '</b><br>%{theta}: %{r:.2f}<extra></extra>',
+  }));
+
+  Plotly.newPlot('chart-radar', traces, {
+    ...DARK_LAYOUT, height: 340, margin: { t: 30, r: 30, b: 20, l: 30 },
+    polar: {
+      bgcolor: '#0d1117',
+      radialaxis: { visible: true, range: [0, 1], showticklabels: false, gridcolor: '#30363d', linecolor: '#30363d' },
+      angularaxis: { gridcolor: '#30363d', linecolor: '#30363d', tickfont: { size: 10, color: '#8b949e' } },
+    },
+    showlegend: true,
+    legend: { ...DARK_LAYOUT.legend, orientation: 'h', x: 0.5, xanchor: 'center', y: 1.12 },
+  }, PLOTLY_CONF);
+
+  // Side-by-side value table
+  const tbody = document.querySelector('#hp-compare-table tbody');
+  if (picks.length === 2) {
+    const [A, B] = picks;
+    const rowsMeta = [
+      { k: 'minutes', l: 'Minutes', d: 0 }, { k: 'goals', l: 'Goals', d: 0 },
+      { k: 'xg', l: 'xG', d: 1 }, { k: 'assists', l: 'Assists', d: 0 },
+      { k: 'xa', l: 'xA', d: 1 }, { k: 'key_passes', l: 'Key passes', d: 0 },
+      { k: 'shots', l: 'Shots', d: 0 }, { k: 'goals_90', l: 'Goals / 90', d: 2 },
+      { k: 'xg_90', l: 'xG / 90', d: 2 }, { k: 'pass_pct', l: 'Pass %', d: 1 },
+    ];
+    tbody.innerHTML = `<tr class="hp-cmp-head"><td>${A.name}</td><td class="td-mid"></td><td class="td-num2">${B.name}</td></tr>` +
+      rowsMeta.map(m => {
+        const av = A[m.k] ?? 0, bv = B[m.k] ?? 0;
+        const aWin = av > bv, bWin = bv > av;
+        return `<tr>
+          <td class="td-num2 ${aWin ? 'hp-win' : ''}">${(+av).toFixed(m.d)}</td>
+          <td class="td-mid">${m.l}</td>
+          <td class="td-num2 ${bWin ? 'hp-win' : ''}">${(+bv).toFixed(m.d)}</td></tr>`;
+      }).join('');
+  } else {
+    tbody.innerHTML = '<tr><td style="color:var(--text3);padding:12px;text-align:center">Pick two players to compare.</td></tr>';
+  }
+}
+
 // ── Metadata ──────────────────────────────────────────────────────────────────
 function updateMeta(meta) {
   const el = document.getElementById('last-updated');
@@ -1117,15 +1333,17 @@ function updateMeta(meta) {
 // ── Bootstrap ─────────────────────────────────────────────────────────────────
 async function init() {
   try {
-    const [probs, groups, scenarios, meta, bracket, market] = await Promise.all([
+    const [probs, groups, scenarios, meta, bracket, market, playerLeaders, playersHist] = await Promise.all([
       fetchJSON('probs.json'),
       fetchJSON('groups.json'),
       fetchJSON('scenarios.json'),
       fetchJSON('meta.json'),
       fetchJSON('bracket.json'),
       fetchJSON('market_odds.json').catch(() => ({ ok: false, winner: {}, reach: {} })),
+      fetchJSON('player_leaders.json').catch(() => ({ golden_boot: [], live: [] })),
+      fetchJSON('players.json').catch(() => ({ players: [] })),
     ]);
-    DATA = { probs, groups, scenarios, meta, bracket, market };
+    DATA = { probs, groups, scenarios, meta, bracket, market, playerLeaders, playersHist };
     updateMarketStale(market);
 
     updateMeta(meta);
@@ -1139,7 +1357,7 @@ async function init() {
     });
 
     // Deep-link support: open the tab named in the URL hash (e.g. #probs, #knockout).
-    const validTabs = ['knockout', 'team', 'probs', 'groups', 'third', 'methodology'];
+    const validTabs = ['knockout', 'team', 'probs', 'players', 'groups', 'third', 'methodology'];
     const hashTab = (location.hash || '').replace('#', '');
     activateTab(validTabs.includes(hashTab) ? hashTab : 'knockout');
   } catch (err) {

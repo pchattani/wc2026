@@ -38,6 +38,7 @@
       <li class="nav-item"><a class="nav-link active" href="#" data-tab="knockout">Knockout</a></li>
       <li class="nav-item"><a class="nav-link" href="#" data-tab="team">Team View</a></li>
       <li class="nav-item"><a class="nav-link" href="#" data-tab="probs">Win Odds</a></li>
+      <li class="nav-item"><a class="nav-link" href="#" data-tab="players">Players</a></li>
       <li class="nav-item"><a class="nav-link" href="#" data-tab="groups">Group Stage</a></li>
       <li class="nav-item"><a class="nav-link" href="#" data-tab="third">3rd-Place Guide</a></li>
       <li class="nav-item"><a class="nav-link" href="#" data-tab="methodology">Methodology</a></li>
@@ -119,6 +120,105 @@
       </div>
 
     </div><!-- row -->
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<!-- TAB: PLAYERS                                                               -->
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<div id="tab-players" class="tab-pane">
+  <div class="container-xl">
+
+    <!-- Source legend -->
+    <div class="src-legend">
+      <span class="src-key"><span class="src-dot src-model"></span>Our Model</span>
+      <span class="src-key"><span class="src-dot src-poly"></span>Polymarket</span>
+      <span class="src-key"><span class="src-dot src-kalshi"></span>Kalshi</span>
+      <span class="src-stale" id="market-stale-players"></span>
+    </div>
+
+    <!-- Section 1: Golden Boot race -->
+    <div class="card">
+      <div class="card-header">Golden Boot Race — Model vs Market
+        <span class="card-sub">de-vigged · P(finish top scorer) · Edge = Model − market consensus</span></div>
+      <div class="card-body" style="padding:0">
+        <table class="wc-table cmp-table">
+          <thead><tr>
+            <th>Player</th>
+            <th class="td-num">Model</th>
+            <th class="td-num">Polymarket</th>
+            <th class="td-num">Kalshi</th>
+            <th class="td-num">Consensus</th>
+            <th class="td-num">Edge</th>
+          </tr></thead>
+          <tbody id="boot-table-body"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card mt-3">
+      <div class="card-header">Golden Boot — Model vs Market</div>
+      <div class="card-body" style="padding:8px"><div id="chart-boot" style="height:520px"></div></div>
+    </div>
+
+    <!-- Section 2: Live leaderboard (this tournament) -->
+    <div class="card mt-3">
+      <div class="card-header">This Tournament — Scoring Leaders
+        <span class="card-sub">live · football-data.org</span></div>
+      <div class="card-body" style="padding:0">
+        <table class="wc-table">
+          <thead><tr>
+            <th>Player</th><th class="td-num">Goals</th><th class="td-num">Assists</th>
+            <th class="td-num">Pens</th><th class="td-num">Apps</th><th class="td-num">G+A</th>
+          </tr></thead>
+          <tbody id="live-leaders-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Section 3: Historical Player Comparison (LAST) -->
+    <div class="hist-banner mt-4">
+      <p class="hist-banner-title">Historical Player Comparison</p>
+      <p class="hist-banner-sub">Advanced analytics below are a player's <strong>historical pedigree</strong> —
+        aggregated from past tournaments (World Cup 2022 &amp; 2018, EURO 2024 &amp; 2020, Copa América 2024,
+        AFCON 2023) via <a href="https://github.com/statsbomb/open-data" target="_blank">StatsBomb Open Data</a>.
+        These are <strong>not</strong> live WC 2026 stats; players without prior-tournament data won't appear here.</p>
+    </div>
+
+    <div class="row g-3 mt-1">
+      <!-- Compare tool -->
+      <div class="col-12 col-lg-6">
+        <div class="card" style="height:100%">
+          <div class="card-header">Compare Two Players <span class="card-sub">per-90, historical</span></div>
+          <div class="card-body">
+            <div class="cmp-pick">
+              <select id="hp-a" class="team-select"><option value="">Player A…</option></select>
+              <span class="cmp-vs">vs</span>
+              <select id="hp-b" class="team-select"><option value="">Player B…</option></select>
+            </div>
+            <div id="chart-radar" style="height:340px"></div>
+            <table class="wc-table" id="hp-compare-table"><tbody></tbody></table>
+          </div>
+        </div>
+      </div>
+      <!-- Historical leaderboard -->
+      <div class="col-12 col-lg-6">
+        <div class="card" style="height:100%">
+          <div class="card-header">Historical Leaderboard
+            <select id="hp-metric" class="hp-metric-select"></select></div>
+          <div class="card-body" style="padding:0; max-height:430px; overflow-y:auto">
+            <table class="wc-table">
+              <thead><tr>
+                <th data-nosort style="width:32px">#</th><th>Player</th>
+                <th class="td-num" id="hp-metric-col">Value</th>
+                <th class="td-num">Min</th>
+              </tr></thead>
+              <tbody id="hp-leader-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -270,6 +370,18 @@
 
       <h4>Apples-to-apples</h4>
       <p>All three sources measure the same event at each stage: the probability of <em>advancing to the next round</em>, i.e. winning that match in full time, extra time, or a penalty shootout. The simulation resolves a knockout draw as a 50/50 shootout (consistent with the historical ~50% outcome of World Cup penalty shootouts), so the model's reach-round probability is directly comparable to the market's reach-round contract.</p>
+
+      <h3>Players &amp; Golden Boot</h3>
+      <p>The <strong>Players</strong> tab has three parts, each with a distinct data basis.</p>
+
+      <h4>Golden Boot model</h4>
+      <p>Our top-scorer probability is a <strong>by-product of the 100,000 tournament simulations</strong>. In each simulated tournament, every knockout scoreline the model samples is distributed across that team's plausible scorers via a multinomial draw, where a player's share of team goals blends (a) goals already scored this tournament, (b) historical goals-per-90 from StatsBomb, and (c) a small role prior, plus an "other players" bucket so squad depth absorbs realistic mass. Each player's final tally is their current goals plus simulated future goals; the per-simulation leader (FIFA tiebreak: goals → assists) wins that run's Golden Boot. Aggregating over all runs gives <strong>P(finish top scorer)</strong>, shown next to the de-vigged <a href="https://polymarket.com" target="_blank">Polymarket</a> and <a href="https://kalshi.com" target="_blank">Kalshi</a> top-scorer markets with an Edge column. This is a deliberately simple, <strong>current-form-driven</strong> estimate: it does not know squad roles, penalty duties, or injuries, so large gaps versus the market (either direction) often reflect information the model can't see — treat Edge as a discussion point, not a lock.</p>
+
+      <h4>Live scoring leaders</h4>
+      <p>Goals, assists, penalties and appearances for the current tournament come from <a href="https://www.football-data.org" target="_blank">football-data.org</a> and refresh every hourly run.</p>
+
+      <h4>Historical Player Comparison (advanced analytics)</h4>
+      <p>The advanced metrics — xG, xA, shots, shots on target, key passes, progressive passes, pass %, goalkeeper saves, and their per-90 rates — are computed from raw event data in <a href="https://github.com/statsbomb/open-data" target="_blank">StatsBomb Open Data</a>, aggregated per player across six completed tournaments (World Cup 2022 &amp; 2018, EURO 2024 &amp; 2020, Copa América 2024, AFCON 2023). These are a player's <strong>historical pedigree, not live WC 2026 stats</strong> — free public sources do not publish live advanced player data during the tournament. A player who has not featured in those six events won't appear in this section, and a breakout star of this World Cup will show live goals/assists but no advanced history. Names are matched across sources by normalized name tokens; occasional mismatches are possible.</p>
 
       <h3>Tournament Structure</h3>
 

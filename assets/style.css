@@ -504,6 +504,32 @@ a:hover { color: #79b8ff; }
   border: 1px solid rgba(248,81,73,0.4); border-radius: 9px; padding: 1px 7px;
 }
 
+/* ── Players tab ──────────────────────────────────────────────────────────── */
+.hist-banner {
+  background: linear-gradient(135deg,#1a2332 0%,#1e2a3a 100%);
+  border: 1px solid var(--border); border-left: 4px solid var(--purple);
+  border-radius: 6px; padding: 14px 20px;
+}
+.hist-banner-title { font-size: 1.02rem; font-weight: 700; color: var(--purple); margin: 0 0 4px; }
+.hist-banner-sub { font-size: 0.82rem; color: var(--text2); margin: 0; line-height: 1.5; }
+
+.cmp-pick { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.cmp-pick .team-select { flex: 1; min-width: 0; }
+.cmp-vs { color: var(--text3); font-size: 0.8rem; font-weight: 700; }
+
+.hp-metric-select {
+  float: right; margin-top: -3px; background: var(--bg2); color: var(--text);
+  border: 1px solid var(--border); border-radius: 5px; padding: 3px 8px;
+  font-size: 0.74rem; text-transform: none; letter-spacing: 0;
+}
+#hp-compare-table { margin-top: 10px; }
+#hp-compare-table .td-num2 { text-align: right; font-variant-numeric: tabular-nums; width: 34%; padding: 5px 10px; }
+#hp-compare-table .td-mid { text-align: center; color: var(--text2); font-size: 0.76rem; width: 32%; }
+#hp-compare-table .hp-cmp-head td { font-weight: 700; color: var(--text); border-bottom: 1px solid var(--border); }
+#hp-compare-table .hp-cmp-head .td-num2:first-child { color: #58a6ff; }
+#hp-compare-table .hp-cmp-head .td-num2:last-child { color: #f778ba; }
+#hp-compare-table .hp-win { color: var(--green); font-weight: 700; }
+
 /* Team View — eliminated banner */
 .tv-elim-banner {
   display: flex; align-items: center; gap: 10px;
