@@ -2419,6 +2419,28 @@
         "Croatia": 0.0055,
         "Australia": 0.0046
       }
+    },
+    {
+      "ts": "2026-07-02T18:09:19Z",
+      "label": "Live",
+      "probs": {
+        "France": 0.2319,
+        "Argentina": 0.1656,
+        "Brazil": 0.1307,
+        "Spain": 0.0925,
+        "England": 0.0621,
+        "Mexico": 0.0618,
+        "Morocco": 0.0556,
+        "Colombia": 0.0413,
+        "Belgium": 0.0337,
+        "Portugal": 0.0333,
+        "USA": 0.0307,
+        "Canada": 0.0161,
+        "Switzerland": 0.0149,
+        "Norway": 0.0069,
+        "Croatia": 0.0055,
+        "Australia": 0.0047
+      }
     }
   ]
 }
