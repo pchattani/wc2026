@@ -3409,6 +3409,28 @@
         "South Korea": 0.0,
         "Czech Republic": 0.0
       }
+    },
+    {
+      "ts": "2026-07-06T21:28:44Z",
+      "label": "Live",
+      "probs": {
+        "France": 0.255,
+        "Spain": 0.2486,
+        "England": 0.1485,
+        "Argentina": 0.1367,
+        "Morocco": 0.0711,
+        "Colombia": 0.0514,
+        "Norway": 0.0322,
+        "Belgium": 0.0215,
+        "Switzerland": 0.0165,
+        "USA": 0.012,
+        "Egypt": 0.0063,
+        "Mexico": 0.0,
+        "South Africa": 0.0,
+        "South Korea": 0.0,
+        "Czech Republic": 0.0,
+        "Canada": 0.0
+      }
     }
   ]
 }
