@@ -36,6 +36,7 @@
   <div class="container-xl">
     <ul class="nav nav-tabs" id="mainTabs">
       <li class="nav-item"><a class="nav-link active" href="#" data-tab="knockout">Knockout</a></li>
+      <li class="nav-item"><a class="nav-link" href="#" data-tab="matches">Matches</a></li>
       <li class="nav-item"><a class="nav-link" href="#" data-tab="team">Team View</a></li>
       <li class="nav-item"><a class="nav-link" href="#" data-tab="probs">Win Odds</a></li>
       <li class="nav-item"><a class="nav-link" href="#" data-tab="players">Players</a></li>
@@ -160,18 +161,58 @@
       <div class="card-body" style="padding:8px"><div id="chart-boot" style="height:520px"></div></div>
     </div>
 
-    <!-- Section 2: Live leaderboard (this tournament) -->
+    <!-- Section 2: This tournament — LIVE advanced stats (Sofascore) -->
     <div class="card mt-3">
-      <div class="card-header">This Tournament — Scoring Leaders
-        <span class="card-sub">live · football-data.org</span></div>
-      <div class="card-body" style="padding:0">
+      <div class="card-header">This Tournament — Advanced Leaderboard
+        <span class="card-sub">live · Sofascore <span class="src-stale" id="sofa-stale-1"></span></span>
+        <span style="float:right;display:inline-flex;gap:8px;align-items:center">
+          <label class="p90-toggle"><input type="checkbox" id="lv-per90"> per 90</label>
+          <select id="lv-metric" class="hp-metric-select" style="float:none;margin:0"></select>
+        </span>
+      </div>
+      <div class="card-body" style="padding:0; max-height:480px; overflow-y:auto">
         <table class="wc-table">
           <thead><tr>
-            <th>Player</th><th class="td-num">Goals</th><th class="td-num">Assists</th>
-            <th class="td-num">Pens</th><th class="td-num">Apps</th><th class="td-num">G+A</th>
+            <th data-nosort style="width:32px">#</th><th>Player</th>
+            <th class="td-num" id="lv-metric-col">Value</th>
+            <th class="td-num">G</th><th class="td-num">xG</th><th class="td-num">A</th>
+            <th class="td-num">Rating</th><th class="td-num">Min</th>
           </tr></thead>
-          <tbody id="live-leaders-body"></tbody>
+          <tbody id="lv-leader-body"></tbody>
         </table>
+      </div>
+    </div>
+
+    <div class="row g-3 mt-1">
+      <!-- Live compare -->
+      <div class="col-12 col-lg-6">
+        <div class="card" style="height:100%">
+          <div class="card-header">Compare — This Tournament
+            <span class="card-sub">live per-90 · Sofascore</span></div>
+          <div class="card-body">
+            <div class="cmp-pick">
+              <select id="lv-a" class="team-select"><option value="">Player A…</option></select>
+              <span class="cmp-vs">vs</span>
+              <select id="lv-b" class="team-select"><option value="">Player B…</option></select>
+            </div>
+            <div id="chart-radar-live" style="height:330px"></div>
+            <table class="wc-table" id="lv-compare-table"><tbody></tbody></table>
+          </div>
+        </div>
+      </div>
+      <!-- Shot map -->
+      <div class="col-12 col-lg-6">
+        <div class="card" style="height:100%">
+          <div class="card-header">Shot Map — This Tournament
+            <span class="card-sub">live · marker size = xG</span></div>
+          <div class="card-body">
+            <div class="cmp-pick">
+              <select id="sm-player" class="team-select"><option value="">Pick a player…</option></select>
+            </div>
+            <div id="chart-shotmap" style="height:380px"></div>
+            <div id="sm-summary" style="font-size:0.78rem;color:var(--text2);padding:4px 2px"></div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -219,6 +260,50 @@
       </div>
     </div>
 
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<!-- TAB: MATCHES (detail: momentum, incidents, shot map, ratings)              -->
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<div id="tab-matches" class="tab-pane">
+  <div class="container-xl">
+    <div class="cmp-pick" style="max-width:560px">
+      <select id="mx-select" class="team-select"><option value="">Select a finished match…</option></select>
+    </div>
+    <div id="mx-content" style="display:none">
+      <div class="row g-3">
+        <div class="col-12"><div id="mx-headline" class="mx-headline"></div></div>
+        <div class="col-12 col-lg-7">
+          <div class="card">
+            <div class="card-header">Match Momentum <span class="card-sub">Sofascore attack momentum</span></div>
+            <div class="card-body" style="padding:8px"><div id="chart-momentum" style="height:230px"></div></div>
+          </div>
+          <div class="card mt-3">
+            <div class="card-header">Shot Map <span class="card-sub">both teams · size = xG</span></div>
+            <div class="card-body" style="padding:8px"><div id="chart-match-shotmap" style="height:360px"></div></div>
+          </div>
+        </div>
+        <div class="col-12 col-lg-5">
+          <div class="card">
+            <div class="card-header">Timeline</div>
+            <div class="card-body" style="padding:8px 12px; max-height:250px; overflow-y:auto">
+              <div id="mx-incidents"></div>
+            </div>
+          </div>
+          <div class="card mt-3">
+            <div class="card-header">Player Ratings <span class="card-sub">Sofascore</span></div>
+            <div class="card-body" style="padding:0; max-height:360px; overflow-y:auto">
+              <table class="wc-table">
+                <thead><tr><th>Player</th><th class="td-num">G</th><th class="td-num">xG</th><th class="td-num">Min</th><th class="td-num">Rating</th></tr></thead>
+                <tbody id="mx-ratings"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p id="mx-empty" class="text-muted2" style="font-size:0.85rem">Pick a match above to see momentum, shot map, timeline and player ratings.</p>
   </div>
 </div>
 
@@ -339,7 +424,7 @@
       <p>The model is trained on <strong>~2,100 international matches</strong> from 2022 to present — including all completed WC 2026 group-stage matches — using time-decay weighting so that recent results carry more influence (half-life ≈ 400 days). Match importance is also weighted by competition tier: World Cup matches receive full weight (1.0), UEFA Euro and Copa América 0.88, AFCON/AFC 0.85, Nations League 0.72, qualifying 0.60–0.62, and friendlies 0.30.</p>
 
       <h4>Expected Goals (xG) Integration</h4>
-      <p>For matches where <strong>Expected Goals data</strong> is available, the model uses xG rather than actual goal counts as the observation. This reduces noise from finishing variance — a team that created 2.4 xG and scored 0 is treated as a stronger team than a 0 xG scoreline implies. xG data is sourced from <a href="https://github.com/statsbomb/open-data" target="_blank">StatsBomb Open Data</a> and covers 314 matches across 6 competitions (WC 2022, EURO 2024, Copa América 2024, AFCON 2023, EURO 2020, WC 2018). A calibration factor (≈ 0.84) is applied to align StatsBomb's xG scale with observed goal rates. Matches without xG data use conventional goal counts and the full Dixon-Coles ρ correction.</p>
+      <p>For matches where <strong>Expected Goals data</strong> is available, the model uses xG rather than actual goal counts as the observation. This reduces noise from finishing variance — a team that created 2.4 xG and scored 0 is treated as a stronger team than a 0 xG scoreline implies. Historical xG comes from <a href="https://github.com/statsbomb/open-data" target="_blank">StatsBomb Open Data</a> (314 matches across WC 2022, EURO 2024, Copa América 2024, AFCON 2023, EURO 2020, WC 2018; calibration ≈ 0.84). <strong>Live WC 2026 matches use team xG from Sofascore</strong>, calibrated the same way on this tournament's own goals-to-xG ratio — so the in-tournament model updates on chance quality, not just scorelines. Matches without any xG data use conventional goal counts and the full Dixon-Coles ρ correction.</p>
 
       <h4>Elo Ratings</h4>
       <p>An independent <strong>Elo rating system</strong> is seeded from the official FIFA 2026 pre-tournament rankings (converted to a 1500-base Elo scale) and updated with a K-factor of 60 from each completed WC 2026 match in chronological order. The Elo model provides a stable long-run prior on team quality that is robust to small-sample noise, particularly for teams without rich recent tournament data.</p>
@@ -374,14 +459,14 @@
       <h3>Players &amp; Golden Boot</h3>
       <p>The <strong>Players</strong> tab has three parts, each with a distinct data basis.</p>
 
-      <h4>Golden Boot model</h4>
-      <p>Our top-scorer probability is a <strong>by-product of the 100,000 tournament simulations</strong>. In each simulated tournament, every knockout scoreline the model samples is distributed across that team's plausible scorers via a multinomial draw, where a player's share of team goals blends (a) goals already scored this tournament, (b) historical goals-per-90 from StatsBomb, and (c) a small role prior, plus an "other players" bucket so squad depth absorbs realistic mass. Each player's final tally is their current goals plus simulated future goals; the per-simulation leader (FIFA tiebreak: goals → assists) wins that run's Golden Boot. Aggregating over all runs gives <strong>P(finish top scorer)</strong>, shown next to the de-vigged <a href="https://polymarket.com" target="_blank">Polymarket</a> and <a href="https://kalshi.com" target="_blank">Kalshi</a> top-scorer markets with an Edge column. This is a deliberately simple, <strong>current-form-driven</strong> estimate: it does not know squad roles, penalty duties, or injuries, so large gaps versus the market (either direction) often reflect information the model can't see — treat Edge as a discussion point, not a lock.</p>
+      <h4>Live player data (Sofascore)</h4>
+      <p>Per-player advanced stats for <strong>this tournament</strong> — xG, xA, xGOT, shots, key passes, big chances created, pass accuracy, duels, goalkeeper saves and goals prevented, Sofascore match ratings, and physical data (distance covered, sprints, top speed) — come from <a href="https://www.sofascore.com" target="_blank">Sofascore</a> match data, fetched incrementally each hourly run (only newly finished matches are requested). The same feed powers the per-match shot maps, momentum charts and timelines on the <strong>Matches</strong> tab. If Sofascore is temporarily unreachable, the dashboard retains the last fetched data and marks the affected sections stale rather than blanking them.</p>
 
-      <h4>Live scoring leaders</h4>
-      <p>Goals, assists, penalties and appearances for the current tournament come from <a href="https://www.football-data.org" target="_blank">football-data.org</a> and refresh every hourly run.</p>
+      <h4>Golden Boot model</h4>
+      <p>Our top-scorer probability is a <strong>by-product of the 100,000 tournament simulations</strong>. In each simulated tournament, every knockout scoreline the model samples is distributed across that team's plausible scorers via a multinomial draw. A player's share of team goals is driven by <strong>live form</strong>: their tournament xG per 90, shrunk toward a historical prior (StatsBomb goals/90, or a role-based rate) in proportion to minutes played — so a hot streak counts, but small samples don't run away — plus goals already scored and an "other players" bucket for squad depth. Each player's final tally is their current goals plus simulated future goals; the per-simulation leader (FIFA tiebreak: goals → assists) wins that run's Golden Boot. Aggregated over all runs this gives <strong>P(finish top scorer)</strong>, shown against the de-vigged <a href="https://polymarket.com" target="_blank">Polymarket</a> and <a href="https://kalshi.com" target="_blank">Kalshi</a> top-scorer markets with an Edge column. The model still doesn't know penalty duties or injuries — treat Edge as a discussion point, not a lock.</p>
 
       <h4>Historical Player Comparison (advanced analytics)</h4>
-      <p>The advanced metrics — xG, xA, shots, shots on target, key passes, progressive passes, pass %, goalkeeper saves, and their per-90 rates — are computed from raw event data in <a href="https://github.com/statsbomb/open-data" target="_blank">StatsBomb Open Data</a>, aggregated per player across six completed tournaments (World Cup 2022 &amp; 2018, EURO 2024 &amp; 2020, Copa América 2024, AFCON 2023). These are a player's <strong>historical pedigree, not live WC 2026 stats</strong> — free public sources do not publish live advanced player data during the tournament. A player who has not featured in those six events won't appear in this section, and a breakout star of this World Cup will show live goals/assists but no advanced history. Names are matched across sources by normalized name tokens; occasional mismatches are possible.</p>
+      <p>The historical metrics — xG, xA, shots, shots on target, key passes, progressive passes, pass %, goalkeeper saves, and their per-90 rates — are computed from raw event data in <a href="https://github.com/statsbomb/open-data" target="_blank">StatsBomb Open Data</a>, aggregated per player across six completed tournaments (World Cup 2022 &amp; 2018, EURO 2024 &amp; 2020, Copa América 2024, AFCON 2023). These are a player's <strong>historical pedigree, not live WC 2026 stats</strong> — the live sections above cover the current tournament. Names are matched across sources by normalized name tokens; occasional mismatches are possible.</p>
 
       <h3>Tournament Structure</h3>
 
@@ -440,6 +525,7 @@
           <tr><td><a href="https://github.com/statsbomb/open-data" target="_blank">StatsBomb Open Data</a></td><td>xG data: WC 2022, EURO 2024, Copa Am 2024, AFCON 2023, EURO 2020, WC 2018 (314 matches)</td><td>Fixed at build</td></tr>
           <tr><td><a href="https://polymarket.com" target="_blank">Polymarket</a></td><td>Outright winner market prices (de-vigged) for the Win Odds comparison</td><td>Each hourly run</td></tr>
           <tr><td><a href="https://kalshi.com" target="_blank">Kalshi</a></td><td>Outright winner + reach-round (R16/QF/SF/Final) market prices (de-vigged)</td><td>Each hourly run</td></tr>
+          <tr><td><a href="https://www.sofascore.com" target="_blank">Sofascore</a></td><td>Live WC 2026 per-player advanced stats, ratings, team xG, shot maps, momentum</td><td>Each hourly run (incremental)</td></tr>
           <tr><td>FIFA Official Rankings (June 2026)</td><td>Pre-tournament team ratings for Elo seeding</td><td>Fixed at tournament start</td></tr>
           <tr><td>FIFA WC 2026 Official Bracket + Annex C</td><td>R32/R16/QF/SF slot assignments; third-place slot lookup (495 rows)</td><td>Fixed</td></tr>
         </tbody>
@@ -476,7 +562,8 @@
     blended 50/50 with a FIFA-ranking Elo model. Group tiebreakers follow the official
     WC 2026 rules (overall pts → H2H pts → H2H GD → H2H GF → overall GD → overall GF).
     Best-8 third-place qualification uses overall record (no H2H); slot assignments
-    follow FIFA Annex C. Live results from football-data.org.
+    follow FIFA Annex C. Live results from football-data.org. Live player stats,
+    ratings, shot maps and momentum data from Sofascore.
     <br><br>
     For questions or feedback: <a href="https://github.com/pchattani">@pchattani</a>
   </div>

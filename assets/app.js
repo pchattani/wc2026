@@ -47,6 +47,7 @@ function renderTab(tabName) {
   if (tabName === 'third')        renderScenarios();
   if (tabName === 'team')         initTeamView();
   if (tabName === 'players')      renderPlayers();
+  if (tabName === 'matches')      initMatches();
   if (tabName === 'methodology')  renderSimsCharts();
 }
 
@@ -1118,8 +1119,21 @@ function playerFlag(team) {
 let playersRendered = false;
 function renderPlayers() {
   renderBootRace();
-  renderLiveLeaders();
-  if (!playersRendered) { initHistoricalCompare(); playersRendered = true; }
+  if (!playersRendered) {
+    initLiveAdvanced();
+    initLiveCompare();
+    initShotMap();
+    initHistoricalCompare();
+    playersRendered = true;
+  }
+}
+
+function updateSofaStale(pl) {
+  const stale = !pl || pl.ok === false;
+  ['sofa-stale-1'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = stale ? '⚠ stale' : '';
+  });
 }
 
 // Section 1: Golden Boot race — Model vs Poly vs Kalshi + Edge, table + lollipop
@@ -1173,24 +1187,283 @@ function renderBootRace() {
   }, PLOTLY_CONF);
 }
 
-// Section 2: live scoring leaders (this tournament)
-function renderLiveLeaders() {
-  const rows = (DATA.playerLeaders && DATA.playerLeaders.live) || [];
-  const body = document.getElementById('live-leaders-body');
-  body.innerHTML = '';
-  rows.forEach(r => {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td>${playerFlag(r.team)}<strong style="margin-left:6px">${r.name}</strong>
-          <span style="font-size:0.7rem;color:var(--text3);margin-left:5px">${r.team}</span></td>
-      <td class="td-num" style="font-weight:700;color:var(--blue)">${r.goals}</td>
-      <td class="td-num">${r.assists}</td>
-      <td class="td-num" style="color:var(--text3)">${r.penalties}</td>
-      <td class="td-num" style="color:var(--text3)">${r.apps}</td>
-      <td class="td-num" style="font-weight:600">${r.goals + r.assists}</td>`;
-    body.appendChild(tr);
+// ── Section 2: LIVE advanced leaderboard (Sofascore) ─────────────────────────
+const LV_METRICS = [
+  { key: 'rating',      label: 'Rating',            d: 2, no90: true },
+  { key: 'goals',       label: 'Goals',             d: 0 },
+  { key: 'assists',     label: 'Assists',           d: 0 },
+  { key: 'xg',          label: 'xG',                d: 2 },
+  { key: 'xa',          label: 'xA',                d: 2 },
+  { key: 'xgot',        label: 'xGOT',              d: 2 },
+  { key: 'shots',       label: 'Shots',             d: 0 },
+  { key: 'sot',         label: 'Shots on target',   d: 0 },
+  { key: 'key_passes',  label: 'Key passes',        d: 0 },
+  { key: 'big_chances', label: 'Big chances created', d: 0 },
+  { key: 'pass_pct',    label: 'Pass %',            d: 1, no90: true },
+  { key: 'duels_won',   label: 'Duels won',         d: 0 },
+  { key: 'tackles_won', label: 'Tackles won',       d: 0 },
+  { key: 'recoveries',  label: 'Ball recoveries',   d: 0 },
+  { key: 'saves',       label: 'GK saves',          d: 0 },
+  { key: 'goals_prevented', label: 'Goals prevented (GK)', d: 2, no90: true },
+  { key: 'km',          label: 'Distance (km)',     d: 1 },
+  { key: 'sprints',     label: 'Sprints',           d: 0 },
+  { key: 'top_speed',   label: 'Top speed (km/h)',  d: 1, no90: true },
+];
+
+function livePlayers() { return (DATA.playersLive && DATA.playersLive.players) || []; }
+
+function initLiveAdvanced() {
+  const sel = document.getElementById('lv-metric');
+  sel.innerHTML = LV_METRICS.map(m => `<option value="${m.key}">${m.label}</option>`).join('');
+  sel.addEventListener('change', renderLiveAdvanced);
+  document.getElementById('lv-per90').addEventListener('change', renderLiveAdvanced);
+  renderLiveAdvanced();
+}
+
+function renderLiveAdvanced() {
+  const key = document.getElementById('lv-metric').value || 'rating';
+  const meta = LV_METRICS.find(m => m.key === key) || LV_METRICS[0];
+  const per90 = document.getElementById('lv-per90').checked && !meta.no90;
+  const vkey = per90 && `${key}_90` ? `${key}_90` : key;
+  document.getElementById('lv-metric-col').textContent = meta.label + (per90 ? ' /90' : '');
+  let pool = livePlayers();
+  // minutes floor: always for rating & per-90 so cameos don't top the board
+  if (per90 || key === 'rating' || meta.no90) pool = pool.filter(p => p.minutes >= 90);
+  const val = p => (vkey in p ? p[vkey] : p[key]) ?? 0;
+  const ranked = [...pool].sort((a, b) => val(b) - val(a)).slice(0, 40);
+  const body = document.getElementById('lv-leader-body');
+  body.innerHTML = ranked.map((p, i) => `
+    <tr>
+      <td style="color:var(--text3)">${i + 1}</td>
+      <td>${playerFlag(p.team)}<strong style="margin-left:6px">${p.name}</strong>
+          <span style="font-size:0.68rem;color:var(--text3);margin-left:4px">${p.team}</span></td>
+      <td class="td-num" style="font-weight:700;color:var(--blue)">${(+val(p)).toFixed(per90 ? 2 : meta.d)}</td>
+      <td class="td-num">${p.goals}</td>
+      <td class="td-num" style="color:var(--text2)">${p.xg.toFixed(1)}</td>
+      <td class="td-num">${p.assists}</td>
+      <td class="td-num" style="color:${p.rating >= 7.5 ? 'var(--green)' : 'var(--text2)'}">${p.rating ?? '—'}</td>
+      <td class="td-num" style="color:var(--text3)">${p.minutes}</td>
+    </tr>`).join('');
+}
+
+// ── Live compare (radar, per-90) ─────────────────────────────────────────────
+const LV_RADAR_AXES = [
+  { key: 'goals_90', label: 'Goals' }, { key: 'xg_90', label: 'xG' },
+  { key: 'assists_90', label: 'Assists' }, { key: 'xa_90', label: 'xA' },
+  { key: 'key_passes_90', label: 'Key passes' }, { key: 'shots_90', label: 'Shots' },
+];
+
+function initLiveCompare() {
+  const pool = livePlayers().filter(p => p.minutes >= 90)
+    .sort((a, b) => (b.rating || 0) - (a.rating || 0));
+  const opts = pool.map(p => `<option value="${p.player_id}">${p.name} (${p.team})</option>`).join('');
+  const a = document.getElementById('lv-a'), b = document.getElementById('lv-b');
+  a.innerHTML = '<option value="">Player A…</option>' + opts;
+  b.innerHTML = '<option value="">Player B…</option>' + opts;
+  if (pool.length >= 2) { a.value = pool[0].player_id; b.value = pool[1].player_id; }
+  a.addEventListener('change', renderLiveRadar);
+  b.addEventListener('change', renderLiveRadar);
+  renderLiveRadar();
+}
+
+function renderLiveRadar() {
+  const pool = livePlayers();
+  const byId = Object.fromEntries(pool.map(p => [String(p.player_id), p]));
+  const picks = [document.getElementById('lv-a').value, document.getElementById('lv-b').value]
+    .filter(Boolean).map(v => byId[v]).filter(Boolean);
+  const base = pool.filter(p => p.minutes >= 90);
+  const p95 = {};
+  LV_RADAR_AXES.forEach(ax => {
+    const vals = base.map(p => p[ax.key] || 0).filter(v => v > 0).sort((x, y) => x - y);
+    p95[ax.key] = vals.length ? (vals[Math.floor(vals.length * 0.95)] || vals[vals.length - 1]) : 1;
   });
-  const tbl = body.closest('table'); if (tbl) makeSortable(tbl);
+  const colors = ['#58a6ff', '#f778ba'], fills = ['rgba(88,166,255,0.18)', 'rgba(247,120,186,0.18)'];
+  const traces = picks.map((p, i) => ({
+    type: 'scatterpolar', fill: 'toself', name: p.name,
+    r: LV_RADAR_AXES.map(ax => Math.min((p[ax.key] || 0) / (p95[ax.key] || 1), 1))
+        .concat([Math.min((p[LV_RADAR_AXES[0].key] || 0) / (p95[LV_RADAR_AXES[0].key] || 1), 1)]),
+    theta: LV_RADAR_AXES.map(ax => ax.label).concat([LV_RADAR_AXES[0].label]),
+    line: { color: colors[i] }, fillcolor: fills[i], marker: { color: colors[i] },
+    hovertemplate: '<b>' + p.name + '</b><br>%{theta}: %{r:.2f}<extra></extra>',
+  }));
+  Plotly.newPlot('chart-radar-live', traces, {
+    ...DARK_LAYOUT, height: 330, margin: { t: 28, r: 28, b: 18, l: 28 },
+    polar: {
+      bgcolor: '#0d1117',
+      radialaxis: { visible: true, range: [0, 1], showticklabels: false, gridcolor: '#30363d', linecolor: '#30363d' },
+      angularaxis: { gridcolor: '#30363d', linecolor: '#30363d', tickfont: { size: 10, color: '#8b949e' } },
+    },
+    showlegend: true,
+    legend: { ...DARK_LAYOUT.legend, orientation: 'h', x: 0.5, xanchor: 'center', y: 1.14 },
+  }, PLOTLY_CONF);
+
+  const tbody = document.querySelector('#lv-compare-table tbody');
+  if (picks.length === 2) {
+    const [A, B] = picks;
+    const rows = [
+      { k: 'minutes', l: 'Minutes', d: 0 }, { k: 'goals', l: 'Goals', d: 0 },
+      { k: 'xg', l: 'xG', d: 2 }, { k: 'assists', l: 'Assists', d: 0 },
+      { k: 'xa', l: 'xA', d: 2 }, { k: 'key_passes', l: 'Key passes', d: 0 },
+      { k: 'big_chances', l: 'Big chances', d: 0 }, { k: 'rating', l: 'Rating', d: 2 },
+      { k: 'pass_pct', l: 'Pass %', d: 1 }, { k: 'km', l: 'Distance km', d: 1 },
+    ];
+    tbody.innerHTML = `<tr class="hp-cmp-head"><td>${A.name}</td><td class="td-mid"></td><td class="td-num2">${B.name}</td></tr>` +
+      rows.map(m => {
+        const av = A[m.k] ?? 0, bv = B[m.k] ?? 0;
+        return `<tr>
+          <td class="td-num2 ${av > bv ? 'hp-win' : ''}">${(+av).toFixed(m.d)}</td>
+          <td class="td-mid">${m.l}</td>
+          <td class="td-num2 ${bv > av ? 'hp-win' : ''}">${(+bv).toFixed(m.d)}</td></tr>`;
+      }).join('');
+  } else {
+    tbody.innerHTML = '<tr><td style="color:var(--text3);padding:12px;text-align:center">Pick two players.</td></tr>';
+  }
+}
+
+// ── Shot maps ────────────────────────────────────────────────────────────────
+// Half-pitch on a 0–100 grid, attacking goal at the top (Sofascore x → goal at 100).
+function pitchShapes() {
+  const L = { color: '#30363d', width: 1.5 };
+  return [
+    { type: 'rect', x0: 0, x1: 100, y0: 46, y1: 100.6, line: L },                 // half-pitch
+    { type: 'rect', x0: 20.5, x1: 79.5, y0: 84.3, y1: 100.6, line: L },           // penalty box
+    { type: 'rect', x0: 34, x1: 66, y0: 94.8, y1: 100.6, line: L },               // 6-yard box
+    { type: 'rect', x0: 44.7, x1: 55.3, y0: 100.6, y1: 102.6, line: { color: '#8b949e', width: 2 } }, // goal
+    { type: 'circle', x0: 49.2, x1: 50.8, y0: 87.7, y1: 89.3, line: L },          // pen spot
+    { type: 'path', path: 'M 38.4 84.3 C 42 78.5 58 78.5 61.6 84.3', line: L },   // D arc
+  ];
+}
+
+function shotTrace(shots, color, name) {
+  return {
+    type: 'scatter', mode: 'markers', name,
+    // Sofascore: x = distance from the attacked goal line (0 = on the line),
+    // y = pitch width. Our half-pitch has the goal at plot-y ≈ 100.
+    x: shots.map(s => s.y),
+    y: shots.map(s => 100 - (s.x ?? 50)),
+    marker: {
+      color: shots.map(s => (s.type === 'goal' ? '#3fb950' : color)),
+      size: shots.map(s => 7 + 26 * (s.xg || 0.03)),
+      symbol: shots.map(s => (s.type === 'goal' ? 'star' : 'circle')),
+      line: { color: '#0d1117', width: 1 }, opacity: 0.85,
+    },
+    text: shots.map(s => `${s.type || 'shot'} · xG ${(s.xg || 0).toFixed(2)}${s.time != null ? ` · ${s.time}'` : ''}<br>${s.match || ''}`),
+    hovertemplate: '%{text}<extra>' + name + '</extra>',
+  };
+}
+
+const SHOTMAP_LAYOUT = () => ({
+  ...DARK_LAYOUT, showlegend: false,
+  margin: { t: 8, r: 8, b: 8, l: 8 },
+  xaxis: { range: [-2, 102], visible: false, fixedrange: true },
+  yaxis: { range: [44, 104], visible: false, fixedrange: true, scaleanchor: 'x' },
+  shapes: pitchShapes(),
+});
+
+function initShotMap() {
+  const players = (DATA.shots && DATA.shots.players) || {};
+  const names = Object.keys(players)
+    .map(n => ({ n, tot: players[n].shots.reduce((a, s) => a + (s.xg || 0), 0) }))
+    .sort((a, b) => b.tot - a.tot);
+  const sel = document.getElementById('sm-player');
+  sel.innerHTML = '<option value="">Pick a player…</option>' +
+    names.map(e => `<option value="${e.n}">${e.n} (${players[e.n].team || ''})</option>`).join('');
+  if (names.length) sel.value = names[0].n;
+  sel.addEventListener('change', renderShotMap);
+  renderShotMap();
+}
+
+function renderShotMap() {
+  const players = (DATA.shots && DATA.shots.players) || {};
+  const name = document.getElementById('sm-player').value;
+  const e = players[name];
+  const shots = (e && e.shots) || [];
+  Plotly.newPlot('chart-shotmap', [shotTrace(shots, '#58a6ff', name || 'shots')],
+    { ...SHOTMAP_LAYOUT(), height: 370 }, PLOTLY_CONF);
+  const goals = shots.filter(s => s.type === 'goal').length;
+  const xg = shots.reduce((a, s) => a + (s.xg || 0), 0);
+  document.getElementById('sm-summary').innerHTML = name
+    ? `<strong>${name}</strong>: ${shots.length} shots · ${goals} goals · ${xg.toFixed(2)} xG · ★ = goal`
+    : '';
+}
+
+// ── TAB: MATCHES ─────────────────────────────────────────────────────────────
+let matchesInit = false;
+function initMatches() {
+  if (matchesInit) return;
+  matchesInit = true;
+  const md = (DATA.matchDetail && DATA.matchDetail.matches) || {};
+  const items = Object.entries(md)
+    .filter(([, m]) => m.home && m.away)
+    .sort((a, b) => (b[1].round || 0) - (a[1].round || 0) || b[0].localeCompare(a[0]));
+  const sel = document.getElementById('mx-select');
+  sel.innerHTML = '<option value="">Select a finished match…</option>' +
+    items.map(([gid, m]) =>
+      `<option value="${gid}">${m.home} ${m.hs ?? ''}–${m.as ?? ''} ${m.away}</option>`).join('');
+  sel.addEventListener('change', () => renderMatch(sel.value));
+  if (items.length) { sel.value = items[0][0]; renderMatch(items[0][0]); }
+}
+
+function renderMatch(gid) {
+  const m = ((DATA.matchDetail && DATA.matchDetail.matches) || {})[gid];
+  const wrap = document.getElementById('mx-content'), empty = document.getElementById('mx-empty');
+  if (!m) { wrap.style.display = 'none'; empty.style.display = ''; return; }
+  wrap.style.display = ''; empty.style.display = 'none';
+
+  document.getElementById('mx-headline').innerHTML =
+    `<span class="mx-team">${playerFlag(m.home)} ${m.home}</span>
+     <span class="mx-score">${m.hs ?? ''} – ${m.as ?? ''}</span>
+     <span class="mx-team">${m.away} ${playerFlag(m.away)}</span>`;
+
+  // Momentum: positive bars = home pressure, negative = away
+  const mom = m.momentum || [];
+  Plotly.newPlot('chart-momentum', [{
+    type: 'bar',
+    x: mom.map(p => p.minute), y: mom.map(p => p.value),
+    marker: { color: mom.map(p => (p.value >= 0 ? 'rgba(88,166,255,0.8)' : 'rgba(247,120,186,0.8)')) },
+    hovertemplate: "%{x}' · %{y}<extra></extra>",
+  }], {
+    ...DARK_LAYOUT, height: 220, margin: { t: 6, r: 10, b: 28, l: 34 }, showlegend: false,
+    bargap: 0.05,
+    xaxis: { ...DARK_LAYOUT.xaxis, title: '', tickfont: { size: 10 } },
+    yaxis: { ...DARK_LAYOUT.yaxis, tickfont: { size: 9 }, zerolinecolor: '#30363d' },
+    annotations: [
+      { x: 0.01, y: 1.08, xref: 'paper', yref: 'paper', text: `<span style="color:#58a6ff">■</span> ${m.home}`, showarrow: false, font: { size: 10, color: '#8b949e' }, xanchor: 'left' },
+      { x: 0.99, y: 1.08, xref: 'paper', yref: 'paper', text: `${m.away} <span style="color:#f778ba">■</span>`, showarrow: false, font: { size: 10, color: '#8b949e' }, xanchor: 'right' },
+    ],
+  }, PLOTLY_CONF);
+
+  // Shot map: both teams
+  const shots = m.shots || [];
+  const hs = shots.filter(s => s.team === m.home), as = shots.filter(s => s.team === m.away);
+  Plotly.newPlot('chart-match-shotmap',
+    [shotTrace(hs, '#58a6ff', m.home), shotTrace(as, '#f778ba', m.away)],
+    { ...SHOTMAP_LAYOUT(), height: 350, showlegend: true,
+      legend: { ...DARK_LAYOUT.legend, orientation: 'h', x: 0.5, xanchor: 'center', y: 0.02 } },
+    PLOTLY_CONF);
+
+  // Incidents timeline
+  const inc = (m.incidents || []).filter(i => i && (i.incident_type || i.type));
+  const icon = t => ({ goal: '⚽', period: '⏱', card: '🟨', yellowcard: '🟨', redcard: '🟥',
+                       substitution: '🔁', penalty: '⚽', varDecision: '📺' })[String(t).toLowerCase()] || '·';
+  document.getElementById('mx-incidents').innerHTML = inc.length
+    ? inc.map(i => {
+        const t = i.incident_type || i.type, min = i.time ?? i.minute;
+        const who = i.player_name || i.player_in || i.text || '';
+        return `<div class="mx-inc"><span class="mx-inc-min">${min != null ? min + "'" : ''}</span>
+                <span>${icon(t)}</span><span class="mx-inc-txt">${who} <span style="color:var(--text3)">${t}</span></span></div>`;
+      }).join('')
+    : '<div style="color:var(--text3);font-size:0.8rem">No timeline available.</div>';
+
+  // Ratings
+  document.getElementById('mx-ratings').innerHTML = (m.ratings || []).map(r => `
+    <tr>
+      <td>${playerFlag(r.team)}<span style="margin-left:6px">${r.name}</span></td>
+      <td class="td-num">${r.goals || ''}</td>
+      <td class="td-num" style="color:var(--text2)">${r.xg ? r.xg.toFixed(2) : ''}</td>
+      <td class="td-num" style="color:var(--text3)">${r.minutes}</td>
+      <td class="td-num" style="font-weight:700;color:${r.rating >= 8 ? 'var(--green)' : r.rating >= 7 ? 'var(--blue)' : 'var(--text2)'}">${r.rating.toFixed(1)}</td>
+    </tr>`).join('');
 }
 
 // Section 3: Historical Player Comparison — leaderboard (metric switch) + radar compare
@@ -1333,7 +1606,8 @@ function updateMeta(meta) {
 // ── Bootstrap ─────────────────────────────────────────────────────────────────
 async function init() {
   try {
-    const [probs, groups, scenarios, meta, bracket, market, playerLeaders, playersHist] = await Promise.all([
+    const [probs, groups, scenarios, meta, bracket, market, playerLeaders, playersHist,
+           playersLive, shots, matchDetail] = await Promise.all([
       fetchJSON('probs.json'),
       fetchJSON('groups.json'),
       fetchJSON('scenarios.json'),
@@ -1342,9 +1616,14 @@ async function init() {
       fetchJSON('market_odds.json').catch(() => ({ ok: false, winner: {}, reach: {} })),
       fetchJSON('player_leaders.json').catch(() => ({ golden_boot: [], live: [] })),
       fetchJSON('players.json').catch(() => ({ players: [] })),
+      fetchJSON('players_live.json').catch(() => ({ ok: false, players: [] })),
+      fetchJSON('shots.json').catch(() => ({ players: {} })),
+      fetchJSON('match_detail.json').catch(() => ({ matches: {} })),
     ]);
-    DATA = { probs, groups, scenarios, meta, bracket, market, playerLeaders, playersHist };
+    DATA = { probs, groups, scenarios, meta, bracket, market, playerLeaders, playersHist,
+             playersLive, shots, matchDetail };
     updateMarketStale(market);
+    updateSofaStale(playersLive);
 
     updateMeta(meta);
     document.getElementById('loading-overlay').style.display = 'none';
@@ -1357,7 +1636,7 @@ async function init() {
     });
 
     // Deep-link support: open the tab named in the URL hash (e.g. #probs, #knockout).
-    const validTabs = ['knockout', 'team', 'probs', 'players', 'groups', 'third', 'methodology'];
+    const validTabs = ['knockout', 'matches', 'team', 'probs', 'players', 'groups', 'third', 'methodology'];
     const hashTab = (location.hash || '').replace('#', '');
     activateTab(validTabs.includes(hashTab) ? hashTab : 'knockout');
   } catch (err) {
