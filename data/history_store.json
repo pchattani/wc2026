@@ -3607,6 +3607,28 @@
         "Canada": 0.0,
         "Bosnia-Herzegovina": 0.0
       }
+    },
+    {
+      "ts": "2026-07-07T17:32:21Z",
+      "label": "Live",
+      "probs": {
+        "Spain": 0.2343,
+        "France": 0.1943,
+        "England": 0.166,
+        "Argentina": 0.1545,
+        "Morocco": 0.0889,
+        "Belgium": 0.0491,
+        "Colombia": 0.0432,
+        "Norway": 0.0407,
+        "Switzerland": 0.0263,
+        "Egypt": 0.0027,
+        "Mexico": 0.0,
+        "South Africa": 0.0,
+        "South Korea": 0.0,
+        "Czech Republic": 0.0,
+        "Canada": 0.0,
+        "Bosnia-Herzegovina": 0.0
+      }
     }
   ]
 }
