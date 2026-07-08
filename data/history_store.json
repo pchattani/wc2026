@@ -3783,6 +3783,28 @@
         "Qatar": 0.0,
         "Brazil": 0.0
       }
+    },
+    {
+      "ts": "2026-07-08T03:51:44Z",
+      "label": "Live",
+      "probs": {
+        "Spain": 0.233,
+        "France": 0.1923,
+        "Argentina": 0.184,
+        "England": 0.1632,
+        "Morocco": 0.0897,
+        "Switzerland": 0.0509,
+        "Belgium": 0.048,
+        "Norway": 0.0389,
+        "Mexico": 0.0,
+        "South Africa": 0.0,
+        "South Korea": 0.0,
+        "Czech Republic": 0.0,
+        "Canada": 0.0,
+        "Bosnia-Herzegovina": 0.0,
+        "Qatar": 0.0,
+        "Brazil": 0.0
+      }
     }
   ]
 }
