@@ -1495,6 +1495,28 @@
         "Morocco": 0.0,
         "Haiti": 0.0
       }
+    },
+    {
+      "ts": "2026-07-12T04:04:36Z",
+      "label": "Live",
+      "probs": {
+        "France": 0.2895,
+        "Argentina": 0.2847,
+        "Spain": 0.2804,
+        "England": 0.1213,
+        "Mexico": 0.0139,
+        "Norway": 0.0102,
+        "South Africa": 0.0,
+        "South Korea": 0.0,
+        "Czech Republic": 0.0,
+        "Canada": 0.0,
+        "Bosnia-Herzegovina": 0.0,
+        "Qatar": 0.0,
+        "Switzerland": 0.0,
+        "Brazil": 0.0,
+        "Morocco": 0.0,
+        "Haiti": 0.0
+      }
     }
   ]
 }
