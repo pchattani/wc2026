@@ -1979,6 +1979,28 @@
         "Haiti": 0.0,
         "Scotland": 0.0
       }
+    },
+    {
+      "ts": "2026-07-14T06:31:13Z",
+      "label": "Live",
+      "probs": {
+        "France": 0.2835,
+        "Spain": 0.2742,
+        "Argentina": 0.2592,
+        "England": 0.1831,
+        "Mexico": 0.0,
+        "South Africa": 0.0,
+        "South Korea": 0.0,
+        "Czech Republic": 0.0,
+        "Canada": 0.0,
+        "Bosnia-Herzegovina": 0.0,
+        "Qatar": 0.0,
+        "Switzerland": 0.0,
+        "Brazil": 0.0,
+        "Morocco": 0.0,
+        "Haiti": 0.0,
+        "Scotland": 0.0
+      }
     }
   ]
 }
