@@ -1121,6 +1121,7 @@ function renderPlayers() {
   renderBootRace();
   if (!playersRendered) {
     initLiveAdvanced();
+    renderPlayerCharts();
     initLiveCompare();
     initShotMap();
     initHistoricalCompare();
@@ -1218,6 +1219,8 @@ function initLiveAdvanced() {
   sel.addEventListener('change', renderLiveAdvanced);
   document.getElementById('lv-per90').addEventListener('change', renderLiveAdvanced);
   renderLiveAdvanced();
+  const tbl = document.getElementById('lv-leader-body').closest('table');
+  if (tbl) makeSortable(tbl);
 }
 
 function renderLiveAdvanced() {
@@ -1244,6 +1247,159 @@ function renderLiveAdvanced() {
       <td class="td-num" style="color:${p.rating >= 7.5 ? 'var(--green)' : 'var(--text2)'}">${p.rating ?? '—'}</td>
       <td class="td-num" style="color:var(--text3)">${p.minutes}</td>
     </tr>`).join('');
+}
+
+// ── Analytics charts (live Sofascore data) ──────────────────────────────────
+// Colors: series carry the site palette (validated: CVD ΔE ≥ 15, contrast ≥ 3:1
+// on #161b22). Diverging polarity = blue (over) ↔ orange (under), never
+// status green/red. All text in ink tokens, hover tooltips on every mark,
+// selective direct labels only.
+const INK = { primary: '#e6edf3', muted: '#8b949e', faint: '#6e7681', grid: '#30363d' };
+const DIVERGE = { pos: '#58a6ff', neg: '#f97316' };
+
+function medianOf(arr) {
+  const s = [...arr].sort((a, b) => a - b);
+  return s.length ? (s[Math.floor((s.length - 1) / 2)] + s[Math.ceil((s.length - 1) / 2)]) / 2 : 0;
+}
+
+// Scatter with hover-everything + labels on only the top-N most notable dots.
+function labeledScatter(el, pts, opts) {
+  const { xlab, ylab, labelTop, height = 440, quadrants = null, sizes = null, zero = true,
+          textPos = 'top center' } = opts;
+  const ranked = [...pts].sort((a, b) => (b.rank ?? 0) - (a.rank ?? 0));
+  const labelSet = new Set(ranked.slice(0, labelTop).map(p => p.name));
+  const trace = {
+    type: 'scatter', mode: 'markers+text',
+    x: pts.map(p => p.x), y: pts.map(p => p.y),
+    text: pts.map(p => labelSet.has(p.name) ? p.name : ''),
+    textposition: textPos,
+    cliponaxis: false,
+    textfont: { size: 10, color: INK.muted },
+    marker: {
+      color: '#58a6ff', opacity: 0.85,
+      size: sizes ? pts.map(p => Math.max(8, p.size)) : 9,
+      line: { color: '#0d1117', width: 1 },
+    },
+    customdata: pts.map(p => p.hover),
+    hovertemplate: '%{customdata}<extra></extra>',
+  };
+  const layout = {
+    ...DARK_LAYOUT, height, showlegend: false,
+    margin: { t: 16, r: textPos.includes('right') ? 88 : 18, b: 44, l: 52 },
+    xaxis: { ...DARK_LAYOUT.xaxis, title: { text: xlab, font: { size: 11, color: INK.muted } }, tickfont: { size: 10 }, rangemode: zero ? 'tozero' : 'normal' },
+    yaxis: { ...DARK_LAYOUT.yaxis, title: { text: ylab, font: { size: 11, color: INK.muted } }, tickfont: { size: 10 }, rangemode: zero ? 'tozero' : 'normal' },
+    hovermode: 'closest',
+  };
+  if (quadrants) {   // median guides + corner captions, all in faint ink
+    const mx = medianOf(pts.map(p => p.x)), my = medianOf(pts.map(p => p.y));
+    layout.shapes = [
+      { type: 'line', x0: mx, x1: mx, y0: 0, y1: 1, yref: 'paper', line: { color: INK.grid, width: 1, dash: 'dot' } },
+      { type: 'line', y0: my, y1: my, x0: 0, x1: 1, xref: 'paper', line: { color: INK.grid, width: 1, dash: 'dot' } },
+    ];
+    layout.annotations = quadrants.map(q => ({
+      x: q.x, y: q.y, xref: 'paper', yref: 'paper', text: q.t, showarrow: false,
+      font: { size: 9.5, color: INK.faint }, xanchor: q.xa || 'center',
+    }));
+  }
+  Plotly.newPlot(el, [trace], layout, PLOTLY_CONF);
+}
+
+// Diverging horizontal bars around zero (blue = over, orange = under).
+function divergingBars(el, rows, opts) {
+  const { xlab, height = 420, fmt = v => v.toFixed(2) } = opts;
+  rows.sort((a, b) => a.v - b.v);   // most negative at bottom, most positive on top
+  Plotly.newPlot(el, [{
+    type: 'bar', orientation: 'h',
+    y: rows.map(r => r.name), x: rows.map(r => r.v),
+    marker: { color: rows.map(r => (r.v >= 0 ? DIVERGE.pos : DIVERGE.neg)) },
+    text: rows.map(r => fmt(r.v)),
+    textposition: 'outside', cliponaxis: false,
+    textfont: { size: 9.5, color: INK.muted },
+    customdata: rows.map(r => r.hover),
+    hovertemplate: '%{customdata}<extra></extra>',
+  }], {
+    ...DARK_LAYOUT, height, showlegend: false,
+    margin: { t: 8, r: 42, b: 40, l: 130 },
+    bargap: 0.25,
+    xaxis: { ...DARK_LAYOUT.xaxis, title: { text: xlab, font: { size: 11, color: INK.muted } }, tickfont: { size: 10 }, zerolinecolor: INK.muted, zerolinewidth: 1 },
+    yaxis: { ...DARK_LAYOUT.yaxis, tickfont: { size: 10.5 } },
+  }, PLOTLY_CONF);
+}
+
+function renderPlayerCharts() {
+  const pool = livePlayers();
+  if (!pool.length) return;
+  const of = pool.filter(p => !p.is_gk);                 // outfielders
+
+  // 1) Creation Map — xG/90 vs xA/90 (the requested chart)
+  const cPts = of.filter(p => p.minutes >= 180).map(p => ({
+    name: p.name, x: p.xg_90, y: p.xa_90,
+    rank: p.xg_90 + p.xa_90,
+    hover: `<b>${p.name}</b> (${p.team})<br>xG/90 ${p.xg_90.toFixed(2)} · xA/90 ${p.xa_90.toFixed(2)}<br>` +
+           `G ${p.goals} · A ${p.assists} · ${p.minutes} min`,
+  }));
+  labeledScatter('chart-creation', cPts, {
+    xlab: 'xG per 90 (scoring threat)', ylab: 'xA per 90 (creative threat)',
+    labelTop: 14, height: 470,
+    quadrants: [
+      { x: 0.99, y: 0.98, t: 'DUAL THREAT', xa: 'right' },
+      { x: 0.01, y: 0.98, t: 'PURE CREATOR', xa: 'left' },
+      { x: 0.99, y: 0.03, t: 'PURE SCORER', xa: 'right' },
+    ],
+  });
+
+  // 2) Clinical or Cold — Goals − xG (finishing over/under-performance)
+  const fin = of.filter(p => p.minutes >= 90 && p.xg >= 0.5)
+    .map(p => ({ name: p.name, v: p.goals - p.xg,
+                 hover: `<b>${p.name}</b> (${p.team})<br>${p.goals} goals from ${p.xg.toFixed(2)} xG` }));
+  fin.sort((a, b) => b.v - a.v);
+  divergingBars('chart-finishing', [...fin.slice(0, 8), ...fin.slice(-8)], {
+    xlab: 'Goals − xG (→ clinical · ← wasteful)', fmt: v => (v > 0 ? '+' : '') + v.toFixed(1),
+  });
+
+  // 3) Shot Profile — volume vs quality, bubble = total xG
+  const sPts = of.filter(p => p.minutes >= 180 && p.shots >= 5).map(p => ({
+    name: p.name, x: p.shots_90, y: p.xg / p.shots,
+    rank: p.xg, size: 8 + p.xg * 4,
+    hover: `<b>${p.name}</b> (${p.team})<br>${p.shots} shots · ${(p.xg / p.shots).toFixed(2)} xG/shot<br>` +
+           `${p.shots_90.toFixed(1)} shots/90 · ${p.xg.toFixed(1)} xG total`,
+  }));
+  labeledScatter('chart-shotprofile', sPts, {
+    xlab: 'Shots per 90 (volume)', ylab: 'xG per shot (chance quality)',
+    labelTop: 6, sizes: true,
+    quadrants: [
+      { x: 0.99, y: 0.98, t: 'HIGH VOLUME · GREAT CHANCES', xa: 'right' },
+      { x: 0.01, y: 0.98, t: 'POACHER', xa: 'left' },
+      { x: 0.99, y: 0.03, t: 'CHANCER', xa: 'right' },
+    ],
+  });
+
+  // 4) Keeper Wall — goals prevented (Sofascore xGOT-based)
+  const gks = pool.filter(p => p.is_gk && p.minutes >= 180)
+    .map(p => ({ name: p.name, v: p.goals_prevented,
+                 hover: `<b>${p.name}</b> (${p.team})<br>${p.goals_prevented.toFixed(2)} goals prevented<br>` +
+                        `${p.saves} saves · ${p.minutes} min` }));
+  gks.sort((a, b) => b.v - a.v);
+  divergingBars('chart-keepers', gks.slice(0, 14), {
+    xlab: 'Goals prevented (→ shot-stopping value)', fmt: v => (v > 0 ? '+' : '') + v.toFixed(1),
+  });
+
+  // 5) Engine Room — physical work rate
+  const ePts = of.filter(p => p.minutes >= 180 && p.km > 0).map(p => ({
+    name: p.name, x: p.km / (p.minutes / 90), y: p.sprints / (p.minutes / 90),
+    rank: p.km / (p.minutes / 90) + p.sprints / (p.minutes / 90) / 8,
+    hover: `<b>${p.name}</b> (${p.team})<br>${(p.km / (p.minutes / 90)).toFixed(1)} km/90 · ` +
+           `${(p.sprints / (p.minutes / 90)).toFixed(1)} sprints/90<br>top speed ${p.top_speed} km/h`,
+  }));
+  labeledScatter('chart-engine', ePts, {
+    xlab: 'Distance per 90 (km)', ylab: 'Sprints per 90',
+    labelTop: 4, zero: false, textPos: 'middle right',
+    quadrants: [
+      { x: 0.99, y: 0.98, t: 'BOX-TO-BOX MOTOR', xa: 'right' },
+      { x: 0.01, y: 0.98, t: 'EXPLOSIVE', xa: 'left' },
+      { x: 0.99, y: 0.03, t: 'CRUISER', xa: 'right' },
+    ],
+  });
 }
 
 // ── Live compare (radar, per-90) ─────────────────────────────────────────────
@@ -1503,6 +1659,8 @@ function initHistoricalCompare() {
   msel.innerHTML = HP_METRICS.map(m => `<option value="${m.key}">${m.label}</option>`).join('');
   msel.addEventListener('change', () => renderHistLeaderboard(msel.value));
   renderHistLeaderboard('goals');
+  const htbl = document.getElementById('hp-leader-body').closest('table');
+  if (htbl) makeSortable(htbl);
 
   // Player pickers (sorted by goals; label with team)
   const opts = players.map((p, i) => `<option value="${i}">${p.name} (${p.team})</option>`).join('');

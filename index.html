@@ -174,12 +174,53 @@
         <table class="wc-table">
           <thead><tr>
             <th data-nosort style="width:32px">#</th><th>Player</th>
-            <th class="td-num" id="lv-metric-col">Value</th>
+            <th class="td-num"><span id="lv-metric-col">Value</span></th>
             <th class="td-num">G</th><th class="td-num">xG</th><th class="td-num">A</th>
             <th class="td-num">Rating</th><th class="td-num">Min</th>
           </tr></thead>
           <tbody id="lv-leader-body"></tbody>
         </table>
+      </div>
+    </div>
+
+    <!-- Analytics charts (live Sofascore data) -->
+    <div class="card mt-3">
+      <div class="card-header">Creation Map — Scoring vs Creating
+        <span class="card-sub">xG/90 vs xA/90 · min 180 min · hover any dot</span></div>
+      <div class="card-body" style="padding:8px"><div id="chart-creation" style="height:480px"></div></div>
+    </div>
+
+    <div class="row g-3 mt-1">
+      <div class="col-12 col-lg-6">
+        <div class="card" style="height:100%">
+          <div class="card-header">Clinical or Cold — Goals − xG
+            <span class="card-sub">finishing over/under-performance · min 90 min</span></div>
+          <div class="card-body" style="padding:8px"><div id="chart-finishing" style="height:420px"></div></div>
+        </div>
+      </div>
+      <div class="col-12 col-lg-6">
+        <div class="card" style="height:100%">
+          <div class="card-header">Shot Profile — Volume vs Quality
+            <span class="card-sub">shots/90 vs xG per shot · bubble = total xG</span></div>
+          <div class="card-body" style="padding:8px"><div id="chart-shotprofile" style="height:420px"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row g-3 mt-1">
+      <div class="col-12 col-lg-6">
+        <div class="card" style="height:100%">
+          <div class="card-header">Keeper Wall — Goals Prevented
+            <span class="card-sub">Sofascore xGOT model · min 180 min</span></div>
+          <div class="card-body" style="padding:8px"><div id="chart-keepers" style="height:420px"></div></div>
+        </div>
+      </div>
+      <div class="col-12 col-lg-6">
+        <div class="card" style="height:100%">
+          <div class="card-header">Engine Room — Work Rate
+            <span class="card-sub">distance/90 vs sprints/90 · outfielders</span></div>
+          <div class="card-body" style="padding:8px"><div id="chart-engine" style="height:420px"></div></div>
+        </div>
       </div>
     </div>
 
@@ -250,7 +291,7 @@
             <table class="wc-table">
               <thead><tr>
                 <th data-nosort style="width:32px">#</th><th>Player</th>
-                <th class="td-num" id="hp-metric-col">Value</th>
+                <th class="td-num"><span id="hp-metric-col">Value</span></th>
                 <th class="td-num">Min</th>
               </tr></thead>
               <tbody id="hp-leader-body"></tbody>
