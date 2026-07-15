@@ -2265,6 +2265,28 @@
         "Scotland": 0.0,
         "USA": 0.0
       }
+    },
+    {
+      "ts": "2026-07-15T09:25:24Z",
+      "label": "Live",
+      "probs": {
+        "Spain": 0.5996,
+        "Argentina": 0.2396,
+        "England": 0.1609,
+        "Mexico": 0.0,
+        "South Africa": 0.0,
+        "South Korea": 0.0,
+        "Czech Republic": 0.0,
+        "Canada": 0.0,
+        "Bosnia-Herzegovina": 0.0,
+        "Qatar": 0.0,
+        "Switzerland": 0.0,
+        "Brazil": 0.0,
+        "Morocco": 0.0,
+        "Haiti": 0.0,
+        "Scotland": 0.0,
+        "USA": 0.0
+      }
     }
   ]
 }
