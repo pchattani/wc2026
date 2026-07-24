@@ -1,28 +1,6 @@
 {
   "snapshots": [
     {
-      "ts": "After MD1",
-      "label": "After MD1",
-      "probs": {
-        "Argentina": 0.1864,
-        "France": 0.1422,
-        "Spain": 0.1328,
-        "England": 0.1164,
-        "Brazil": 0.0834,
-        "Portugal": 0.0762,
-        "Germany": 0.0634,
-        "Netherlands": 0.038,
-        "Colombia": 0.0346,
-        "Belgium": 0.0306,
-        "USA": 0.018,
-        "Japan": 0.0176,
-        "Uruguay": 0.0172,
-        "Morocco": 0.0126,
-        "Croatia": 0.008,
-        "Mexico": 0.007
-      }
-    },
-    {
       "ts": "Pre-tournament",
       "label": "Pre-tournament",
       "probs": {
@@ -4380,6 +4358,28 @@
     },
     {
       "ts": "2026-07-24T09:40:33Z",
+      "label": "Live",
+      "probs": {
+        "Spain": 1.0,
+        "Mexico": 0.0,
+        "South Africa": 0.0,
+        "South Korea": 0.0,
+        "Czech Republic": 0.0,
+        "Canada": 0.0,
+        "Bosnia-Herzegovina": 0.0,
+        "Qatar": 0.0,
+        "Switzerland": 0.0,
+        "Brazil": 0.0,
+        "Morocco": 0.0,
+        "Haiti": 0.0,
+        "Scotland": 0.0,
+        "USA": 0.0,
+        "Paraguay": 0.0,
+        "Australia": 0.0
+      }
+    },
+    {
+      "ts": "2026-07-24T11:58:20Z",
       "label": "Live",
       "probs": {
         "Spain": 1.0,
