@@ -1,28 +1,6 @@
 {
   "snapshots": [
     {
-      "ts": "2026-06-28T04:16:57Z",
-      "label": "Live",
-      "probs": {
-        "Argentina": 0.2195,
-        "France": 0.1428,
-        "Spain": 0.1086,
-        "England": 0.0759,
-        "Brazil": 0.0727,
-        "Colombia": 0.0578,
-        "Portugal": 0.0518,
-        "Netherlands": 0.0464,
-        "Germany": 0.0364,
-        "Morocco": 0.0314,
-        "Japan": 0.0272,
-        "Mexico": 0.0268,
-        "Belgium": 0.0261,
-        "Switzerland": 0.0133,
-        "USA": 0.0123,
-        "Croatia": 0.0073
-      }
-    },
-    {
       "ts": "2026-06-28T04:34:46Z",
       "label": "Live",
       "probs": {
@@ -4380,6 +4358,28 @@
     },
     {
       "ts": "2026-07-26T15:34:45Z",
+      "label": "Live",
+      "probs": {
+        "Spain": 1.0,
+        "Mexico": 0.0,
+        "South Africa": 0.0,
+        "South Korea": 0.0,
+        "Czech Republic": 0.0,
+        "Canada": 0.0,
+        "Bosnia-Herzegovina": 0.0,
+        "Qatar": 0.0,
+        "Switzerland": 0.0,
+        "Brazil": 0.0,
+        "Morocco": 0.0,
+        "Haiti": 0.0,
+        "Scotland": 0.0,
+        "USA": 0.0,
+        "Paraguay": 0.0,
+        "Australia": 0.0
+      }
+    },
+    {
+      "ts": "2026-07-26T17:29:51Z",
       "label": "Live",
       "probs": {
         "Spain": 1.0,
